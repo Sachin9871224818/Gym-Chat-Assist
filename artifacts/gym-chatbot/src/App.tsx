@@ -14,6 +14,7 @@ import DietPlans from "@/pages/DietPlans";
 import WorkoutPlans from "@/pages/WorkoutPlans";
 import Leads from "@/pages/Leads";
 import Broadcasts from "@/pages/Broadcasts";
+import Membership from "@/pages/Membership";
 import Layout from "@/components/Layout";
 
 const queryClient = new QueryClient({
@@ -35,6 +36,7 @@ function Router() {
         <Route path="/attendance" component={Attendance} />
         <Route path="/diet-plans" component={DietPlans} />
         <Route path="/workout-plans" component={WorkoutPlans} />
+        <Route path="/membership" component={Membership} />
         <Route path="/leads" component={Leads} />
         <Route path="/broadcasts" component={Broadcasts} />
         <Route component={NotFound} />

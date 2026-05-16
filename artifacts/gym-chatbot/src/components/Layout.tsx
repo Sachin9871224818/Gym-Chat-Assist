@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, MessageSquare, Users, UserCheck,
-  ClipboardList, Salad, Dumbbell, Target, Megaphone, Menu, X
+  ClipboardList, Salad, Dumbbell, Target, Megaphone, Menu, X, CreditCard
 } from "lucide-react";
 import { useState } from "react";
 
@@ -9,6 +9,7 @@ const nav = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/chat", icon: MessageSquare, label: "Chatbot" },
   { href: "/members", icon: Users, label: "Members" },
+  { href: "/membership", icon: CreditCard, label: "Membership" },
   { href: "/trainers", icon: UserCheck, label: "Trainers" },
   { href: "/attendance", icon: ClipboardList, label: "Attendance" },
   { href: "/diet-plans", icon: Salad, label: "Diet Plans" },
