@@ -1,0 +1,216 @@
+Create a modern Gym Management Chatbot System that works like a real conversational chatbot for websites instead of a simple WhatsApp automation bot. The chatbot should be embeddable on any website and behave like a smart guided assistant with session memory, menu navigation, workflows, reminders, and conversational interactions.
+
+The system should use:
+
+* Frontend Chat Widget (embeddable website chatbot)
+* Backend Automation Engine
+* PostgreSQL Database
+* Admin Panel
+* Trainer Panel
+
+The chatbot must support conversational flow management using:
+
+* mode
+* pending_step
+* pending_data
+* updated_at
+* bot_mode
+
+The chatbot should maintain user session state and automatically reset inactive sessions after 30 minutes.
+
+The chatbot must support multi-demo or multi-business mode using:
+
+* resto
+* gym
+* salon
+* clinic
+* ecommerce
+
+Where:
+
+* bot_mode decides which business chatbot is active
+* mode decides current workflow state
+
+Example:
+
+* New visitor arrives
+* Chatbot greets user
+* User selects Gym Bot
+* All future conversations continue inside gym workflow until timeout/reset
+
+Core chatbot behavior:
+
+* Friendly conversational assistant
+* Button-based navigation
+* Step-by-step forms
+* Session memory
+* Workflow continuation
+* Dynamic menus
+* Human-like guided flow without AI dependency
+
+Gym Bot Features:
+
+1. Member Registration
+
+* Name
+* Phone
+* Gender
+* Age
+* Weight
+* Height
+* Goal
+* Membership Plan
+* Joining Date
+* Payment Status
+
+2. Membership Plans
+
+* 1 Month ₹2000
+* 3 Months ₹5000
+* 6 Months ₹9000
+* 1 Year ₹17000
+
+3. Attendance System
+
+* Check IN
+* Check OUT
+* Attendance logs
+* Last visit tracking
+* Attendance reports
+
+4. Fees Management
+
+* Fees reminders
+* Payment tracking
+* Membership renewal alerts
+* Expiry reminders
+
+5. Trainer Management
+
+* Trainer assignment
+* Trainer booking
+* Trainer schedule
+* Assigned member list
+
+6. Diet Plans
+
+* Trainer uploads diet plans
+* Goal-based diet suggestions
+* Member diet access
+
+7. Workout Plans
+
+* Daily workout routines
+* Home workout suggestions
+* Goal-based exercise plans
+
+8. Water Reminder System
+
+* Automatic reminders
+* Scheduled notifications
+
+9. Workout Reminder System
+
+* Daily workout reminders
+* Gym visit reminders
+
+10. Progress Tracking
+
+* Weight tracking
+* BMI tracking
+* Goal tracking
+* Progress reports
+
+11. Trial Booking
+
+* Trial registration
+* Trial booking form
+* Lead collection
+
+12. Customer Support
+
+* Contact support
+* Trainer support
+* Help menu
+
+13. Broadcast System
+
+* Offers
+* Announcements
+* Festival campaigns
+* Membership promotions
+
+14. Exercise Posters
+
+* Workout images
+* Exercise guides
+* Fitness tips
+
+15. Lead Collection System
+
+* Inquiry forms
+* Lead storage
+* Follow-up management
+
+16. Non-Registered Visitor Features
+
+* Gym fees
+* Timings
+* Google Maps link
+* Website link
+* Trial booking
+* Direct registration
+* Payment options
+
+17. Admin Panel
+
+* Members management
+* Fees tracking
+* Attendance reports
+* Trainers management
+* Leads dashboard
+* Broadcast management
+
+18. Trainer Panel
+
+* Assigned members
+* Upload diet plans
+* Upload workout plans
+* Attendance view
+* Booking schedule
+
+19. Payment System
+
+* Dynamic UPI payment links
+* No payment gateway required
+
+20. Technical Requirements
+
+* PostgreSQL database
+* Session management
+* Conversation state engine
+* Responsive chatbot UI
+* Mobile-friendly
+* Website embeddable
+* Real-time conversation updates
+* Workflow-based architecture
+* Scalable multi-business support
+
+Database conversation_state structure should include:
+
+* phone/user_id
+* bot_mode
+* mode
+* pending_step
+* pending_data
+* updated_at
+* step_updated_at
+
+Session reset logic:
+
+* If no activity for 30 minutes
+* Reset bot_mode
+* Reset pending workflow
+* Show fresh welcome menu again
+
+The chatbot should feel like a real business assistant, not a static menu bot. The experience should be conversational, modern, responsive, scalable, and suitable for gyms, salons, clinics, restaurants, and other businesses.

@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Gym Management Chatbot API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: chat
+    description: Chatbot conversation
+  - name: members
+    description: Member management
+  - name: trainers
+    description: Trainer management
+  - name: attendance
+    description: Attendance tracking
+  - name: plans
+    description: Diet and workout plans
+  - name: leads
+    description: Lead collection
+  - name: broadcast
+    description: Broadcast messages
+  - name: dashboard
+    description: Admin dashboard
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,666 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── CHAT ──────────────────────────────────────────────────────────────────
+  /chat/session:
+    post:
+      operationId: createChatSession
+      tags: [chat]
+      summary: Create or restore a chat session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "200":
+          description: Session state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatSession"
+
+  /chat/message:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a message and get bot response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageInput"
+      responses:
+        "200":
+          description: Bot response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+  /chat/session/{sessionId}:
+    delete:
+      operationId: resetChatSession
+      tags: [chat]
+      summary: Reset a chat session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── MEMBERS ───────────────────────────────────────────────────────────────
+  /members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List all members
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: plan
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+    post:
+      operationId: createMember
+      tags: [members]
+      summary: Register a new member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: Created member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+
+  /members/{id}:
+    get:
+      operationId: getMember
+      tags: [members]
+      summary: Get a member by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+    patch:
+      operationId: updateMember
+      tags: [members]
+      summary: Update a member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberUpdate"
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+    delete:
+      operationId: deleteMember
+      tags: [members]
+      summary: Delete a member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /members/{id}/progress:
+    get:
+      operationId: getMemberProgress
+      tags: [members]
+      summary: Get member progress tracking entries
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Progress entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProgressEntry"
+    post:
+      operationId: addMemberProgress
+      tags: [members]
+      summary: Add a progress entry for member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressEntryInput"
+      responses:
+        "201":
+          description: Progress entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressEntry"
+
+  /members/{id}/renew:
+    post:
+      operationId: renewMembership
+      tags: [members]
+      summary: Renew a member's membership
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenewalInput"
+      responses:
+        "200":
+          description: Renewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+
+  # ── ATTENDANCE ────────────────────────────────────────────────────────────
+  /attendance:
+    get:
+      operationId: listAttendance
+      tags: [attendance]
+      summary: List attendance records
+      parameters:
+        - name: memberId
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttendanceRecord"
+    post:
+      operationId: recordAttendance
+      tags: [attendance]
+      summary: Check in or check out
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceInput"
+      responses:
+        "200":
+          description: Attendance recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceRecord"
+
+  # ── TRAINERS ──────────────────────────────────────────────────────────────
+  /trainers:
+    get:
+      operationId: listTrainers
+      tags: [trainers]
+      summary: List all trainers
+      responses:
+        "200":
+          description: Trainers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trainer"
+    post:
+      operationId: createTrainer
+      tags: [trainers]
+      summary: Add a new trainer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainerInput"
+      responses:
+        "201":
+          description: Created trainer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trainer"
+
+  /trainers/{id}:
+    get:
+      operationId: getTrainer
+      tags: [trainers]
+      summary: Get trainer details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trainer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trainer"
+    patch:
+      operationId: updateTrainer
+      tags: [trainers]
+      summary: Update trainer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainerUpdate"
+      responses:
+        "200":
+          description: Updated trainer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trainer"
+    delete:
+      operationId: deleteTrainer
+      tags: [trainers]
+      summary: Delete a trainer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /trainers/{id}/members:
+    get:
+      operationId: getTrainerMembers
+      tags: [trainers]
+      summary: Get members assigned to a trainer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assigned members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+
+  /trainers/{id}/bookings:
+    get:
+      operationId: getTrainerBookings
+      tags: [trainers]
+      summary: Get trainer bookings/schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trainer bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrainerBooking"
+
+  /trainers/bookings:
+    post:
+      operationId: createTrainerBooking
+      tags: [trainers]
+      summary: Book a trainer session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainerBookingInput"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainerBooking"
+
+  # ── DIET PLANS ────────────────────────────────────────────────────────────
+  /diet-plans:
+    get:
+      operationId: listDietPlans
+      tags: [plans]
+      summary: List diet plans
+      parameters:
+        - name: goal
+          in: query
+          schema:
+            type: string
+        - name: trainerId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Diet plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DietPlan"
+    post:
+      operationId: createDietPlan
+      tags: [plans]
+      summary: Create a diet plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DietPlanInput"
+      responses:
+        "201":
+          description: Diet plan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DietPlan"
+
+  /workout-plans:
+    get:
+      operationId: listWorkoutPlans
+      tags: [plans]
+      summary: List workout plans
+      parameters:
+        - name: goal
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workout plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutPlan"
+    post:
+      operationId: createWorkoutPlan
+      tags: [plans]
+      summary: Create a workout plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutPlanInput"
+      responses:
+        "201":
+          description: Workout plan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutPlan"
+
+  # ── LEADS ─────────────────────────────────────────────────────────────────
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List leads
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Leads list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+    post:
+      operationId: createLead
+      tags: [leads]
+      summary: Submit an inquiry / lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "201":
+          description: Lead created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /leads/{id}:
+    patch:
+      operationId: updateLead
+      tags: [leads]
+      summary: Update lead status / notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadUpdate"
+      responses:
+        "200":
+          description: Updated lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  # ── BROADCAST ─────────────────────────────────────────────────────────────
+  /broadcasts:
+    get:
+      operationId: listBroadcasts
+      tags: [broadcast]
+      summary: List broadcasts
+      responses:
+        "200":
+          description: Broadcasts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Broadcast"
+    post:
+      operationId: createBroadcast
+      tags: [broadcast]
+      summary: Create and send a broadcast
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BroadcastInput"
+      responses:
+        "201":
+          description: Broadcast created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Broadcast"
+
+  # ── DASHBOARD ─────────────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get admin dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/expiring-memberships:
+    get:
+      operationId: getExpiringMemberships
+      tags: [dashboard]
+      summary: Get members with memberships expiring soon
+      responses:
+        "200":
+          description: Expiring memberships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/attendance-stats:
+    get:
+      operationId: getAttendanceStats
+      tags: [dashboard]
+      summary: Get attendance statistics
+      responses:
+        "200":
+          description: Attendance stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +710,647 @@ components:
       required:
         - status
 
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    # ── CHAT SCHEMAS ────────────────────────────────────────────────────────
+    SessionInput:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        phone:
+          type: ["string", "null"]
+      required:
+        - sessionId
+
+    ChatSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        botMode:
+          type: ["string", "null"]
+        mode:
+          type: ["string", "null"]
+        pendingStep:
+          type: ["string", "null"]
+        pendingData:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+        isNew:
+          type: boolean
+      required:
+        - sessionId
+        - isNew
+        - updatedAt
+
+    ChatMessageInput:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        message:
+          type: string
+        phone:
+          type: ["string", "null"]
+      required:
+        - sessionId
+        - message
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+        content:
+          type: string
+        buttons:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatButton"
+        timestamp:
+          type: string
+      required:
+        - id
+        - role
+        - content
+        - timestamp
+
+    ChatButton:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+      required:
+        - label
+        - value
+
+    ChatResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        session:
+          $ref: "#/components/schemas/ChatSession"
+      required:
+        - messages
+        - session
+
+    # ── MEMBER SCHEMAS ──────────────────────────────────────────────────────
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        gender:
+          type: string
+        age:
+          type: integer
+        weight:
+          type: ["number", "null"]
+        height:
+          type: ["number", "null"]
+        goal:
+          type: ["string", "null"]
+        plan:
+          type: string
+        joiningDate:
+          type: string
+        expiryDate:
+          type: string
+        paymentStatus:
+          type: string
+        trainerId:
+          type: ["integer", "null"]
+        trainerName:
+          type: ["string", "null"]
+        bmi:
+          type: ["number", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - phone
+        - gender
+        - age
+        - plan
+        - joiningDate
+        - expiryDate
+        - paymentStatus
+        - status
+        - createdAt
+
+    MemberInput:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        gender:
+          type: string
+        age:
+          type: integer
+        weight:
+          type: ["number", "null"]
+        height:
+          type: ["number", "null"]
+        goal:
+          type: ["string", "null"]
+        plan:
+          type: string
+        joiningDate:
+          type: string
+        paymentStatus:
+          type: string
+        trainerId:
+          type: ["integer", "null"]
+      required:
+        - name
+        - phone
+        - gender
+        - age
+        - plan
+        - joiningDate
+        - paymentStatus
+
+    MemberUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        gender:
+          type: string
+        age:
+          type: integer
+        weight:
+          type: ["number", "null"]
+        height:
+          type: ["number", "null"]
+        goal:
+          type: ["string", "null"]
+        plan:
+          type: string
+        paymentStatus:
+          type: string
+        trainerId:
+          type: ["integer", "null"]
+        status:
+          type: string
+
+    RenewalInput:
+      type: object
+      properties:
+        plan:
+          type: string
+        paymentStatus:
+          type: string
+      required:
+        - plan
+        - paymentStatus
+
+    ProgressEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        memberId:
+          type: integer
+        weight:
+          type: ["number", "null"]
+        bmi:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+        recordedAt:
+          type: string
+      required:
+        - id
+        - memberId
+        - recordedAt
+
+    ProgressEntryInput:
+      type: object
+      properties:
+        weight:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+      required: []
+
+    # ── ATTENDANCE SCHEMAS ──────────────────────────────────────────────────
+    AttendanceRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        memberId:
+          type: integer
+        memberName:
+          type: ["string", "null"]
+        checkIn:
+          type: ["string", "null"]
+        checkOut:
+          type: ["string", "null"]
+        date:
+          type: string
+      required:
+        - id
+        - memberId
+        - date
+
+    AttendanceInput:
+      type: object
+      properties:
+        memberId:
+          type: integer
+        type:
+          type: string
+          enum: [check_in, check_out]
+        phone:
+          type: ["string", "null"]
+      required:
+        - memberId
+        - type
+
+    AttendanceStats:
+      type: object
+      properties:
+        todayCount:
+          type: integer
+        weekCount:
+          type: integer
+        monthCount:
+          type: integer
+        byDay:
+          type: array
+          items:
+            type: object
+            properties:
+              day:
+                type: string
+              count:
+                type: integer
+            required:
+              - day
+              - count
+      required:
+        - todayCount
+        - weekCount
+        - monthCount
+        - byDay
+
+    # ── TRAINER SCHEMAS ─────────────────────────────────────────────────────
+    Trainer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        specialization:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - phone
+        - memberCount
+        - createdAt
+
+    TrainerInput:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        specialization:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+      required:
+        - name
+        - phone
+
+    TrainerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        specialization:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+
+    TrainerBooking:
+      type: object
+      properties:
+        id:
+          type: integer
+        trainerId:
+          type: integer
+        trainerName:
+          type: ["string", "null"]
+        memberId:
+          type: integer
+        memberName:
+          type: ["string", "null"]
+        scheduledAt:
+          type: string
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - trainerId
+        - memberId
+        - scheduledAt
+        - status
+        - createdAt
+
+    TrainerBookingInput:
+      type: object
+      properties:
+        trainerId:
+          type: integer
+        memberId:
+          type: integer
+        scheduledAt:
+          type: string
+        notes:
+          type: ["string", "null"]
+      required:
+        - trainerId
+        - memberId
+        - scheduledAt
+
+    # ── PLAN SCHEMAS ────────────────────────────────────────────────────────
+    DietPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        goal:
+          type: string
+        content:
+          type: string
+        trainerId:
+          type: ["integer", "null"]
+        trainerName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - goal
+        - content
+        - createdAt
+
+    DietPlanInput:
+      type: object
+      properties:
+        title:
+          type: string
+        goal:
+          type: string
+        content:
+          type: string
+        trainerId:
+          type: ["integer", "null"]
+      required:
+        - title
+        - goal
+        - content
+
+    WorkoutPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        goal:
+          type: string
+        content:
+          type: string
+        trainerId:
+          type: ["integer", "null"]
+        trainerName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - goal
+        - content
+        - createdAt
+
+    WorkoutPlanInput:
+      type: object
+      properties:
+        title:
+          type: string
+        goal:
+          type: string
+        content:
+          type: string
+        trainerId:
+          type: ["integer", "null"]
+      required:
+        - title
+        - goal
+        - content
+
+    # ── LEAD SCHEMAS ────────────────────────────────────────────────────────
+    Lead:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        interest:
+          type: ["string", "null"]
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - phone
+        - status
+        - createdAt
+
+    LeadInput:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+        interest:
+          type: ["string", "null"]
+      required:
+        - name
+        - phone
+
+    LeadUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+
+    # ── BROADCAST SCHEMAS ───────────────────────────────────────────────────
+    Broadcast:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+        targetAudience:
+          type: string
+        sentCount:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - message
+        - type
+        - targetAudience
+        - sentCount
+        - createdAt
+
+    BroadcastInput:
+      type: object
+      properties:
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+        targetAudience:
+          type: string
+      required:
+        - title
+        - message
+        - type
+        - targetAudience
+
+    # ── DASHBOARD SCHEMAS ───────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      properties:
+        totalMembers:
+          type: integer
+        activeMembers:
+          type: integer
+        expiredMembers:
+          type: integer
+        todayAttendance:
+          type: integer
+        totalTrainers:
+          type: integer
+        totalLeads:
+          type: integer
+        monthlyRevenue:
+          type: number
+        expiringThisMonth:
+          type: integer
+      required:
+        - totalMembers
+        - activeMembers
+        - expiredMembers
+        - todayAttendance
+        - totalTrainers
+        - totalLeads
+        - monthlyRevenue
+        - expiringThisMonth
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+        timestamp:
+          type: string
+      required:
+        - id
+        - type
+        - description
+        - timestamp
