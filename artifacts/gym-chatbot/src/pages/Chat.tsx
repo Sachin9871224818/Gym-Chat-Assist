@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useCreateChatSession, useSendChatMessage, useResetChatSession } from "@workspace/api-client-react";
 import { Send, RefreshCw, MessageSquare, Bot } from "lucide-react";
 
@@ -27,6 +27,7 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [started, setStarted] = useState(false);
+  const [pendingButtonMsgId, setPendingButtonMsgId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const createSession = useCreateChatSession();
@@ -40,13 +41,15 @@ export default function Chat() {
         onSuccess: (sess) => {
           if (sess.isNew || !sess.botMode) {
             setTimeout(() => {
-              addBotMsg({
+              const msg: ChatMsg = {
                 id: `welcome-${Date.now()}`,
                 role: "bot",
                 content: "Hello! Welcome to FitPro Gym. I am your smart assistant. Please select the service you need:",
                 buttons: [{ label: "Gym Management", value: "gym" }],
                 timestamp: new Date().toISOString(),
-              });
+              };
+              setMessages([msg]);
+              setPendingButtonMsgId(msg.id);
             }, 400);
           }
         },
@@ -58,13 +61,19 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  function addBotMsg(msg: ChatMsg) {
-    setMessages(prev => [...prev, msg]);
-  }
+  const lastActiveBtnMsgId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "bot" && messages[i].buttons && messages[i].buttons!.length > 0) {
+        return messages[i].id;
+      }
+    }
+    return pendingButtonMsgId;
+  }, [messages, pendingButtonMsgId]);
 
   function send(text: string) {
-    if (!text.trim() || sendMessage.isPending) return;
+    if (!text.trim() || sendMessage.isPending || isTyping) return;
     setInput("");
+    setPendingButtonMsgId(null);
 
     const userMsg: ChatMsg = {
       id: `user-${Date.now()}`,
@@ -79,24 +88,28 @@ export default function Chat() {
     sendMessage.mutate({ data: { sessionId, message: text } }, {
       onSuccess: (res) => {
         setIsTyping(false);
-        const botMsgs = res.messages.filter(m => m.role === "bot");
+        const botMsgs = res.messages.filter((m: ChatMsg) => m.role === "bot");
         let delay = 0;
-        botMsgs.forEach(msg => {
-          delay += 350;
+        botMsgs.forEach((msg: ChatMsg) => {
+          delay += 400;
           setTimeout(() => {
             setMessages(prev => [...prev, msg as ChatMsg]);
+            if (msg.buttons && msg.buttons.length > 0) {
+              setPendingButtonMsgId(msg.id);
+            }
           }, delay);
         });
       },
       onError: () => {
         setIsTyping(false);
-        addBotMsg({
+        const errMsg: ChatMsg = {
           id: `err-${Date.now()}`,
           role: "bot",
           content: "Sorry, something went wrong. Please try again.",
           buttons: [],
           timestamp: new Date().toISOString(),
-        });
+        };
+        setMessages(prev => [...prev, errMsg]);
       },
     });
   }
@@ -105,6 +118,7 @@ export default function Chat() {
     resetSession.mutate({ sessionId }, {
       onSuccess: () => {
         setMessages([]);
+        setPendingButtonMsgId(null);
         setStarted(false);
       },
     });
@@ -146,47 +160,61 @@ export default function Chat() {
           </div>
         )}
 
-        {messages.map(msg => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            data-testid={`chat-message-${msg.id}`}
-          >
-            <div className={`max-w-xs lg:max-w-sm ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
-              {msg.role === "bot" && (
-                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 self-start">
-                  <Bot className="w-3 h-3 text-white" />
+        {messages.map(msg => {
+          const isActive = msg.id === lastActiveBtnMsgId && !isTyping && !sendMessage.isPending;
+          return (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              data-testid={`chat-message-${msg.id}`}
+            >
+              <div className={`max-w-xs lg:max-w-sm ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                {msg.role === "bot" && (
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 self-start">
+                    <Bot className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <div
+                  className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-tr-sm"
+                      : "bg-card border border-border text-foreground rounded-tl-sm shadow-xs"
+                  }`}
+                >
+                  {msg.content}
                 </div>
-              )}
-              <div
-                className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-tr-sm"
-                    : "bg-card border border-border text-foreground rounded-tl-sm shadow-xs"
-                }`}
-              >
-                {msg.content}
+
+                {msg.buttons && msg.buttons.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {msg.buttons.map(btn => (
+                      isActive ? (
+                        <button
+                          key={btn.value}
+                          onClick={() => send(btn.value)}
+                          data-testid={`chat-button-${btn.value}`}
+                          className="text-xs px-3 py-1.5 rounded-full border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors font-medium"
+                        >
+                          {btn.label}
+                        </button>
+                      ) : (
+                        <span
+                          key={btn.value}
+                          className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground font-medium opacity-50 cursor-not-allowed"
+                        >
+                          {btn.label}
+                        </span>
+                      )
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-muted-foreground px-1">
+                  {new Date(msg.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                </p>
               </div>
-              {msg.buttons && msg.buttons.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {msg.buttons.map(btn => (
-                    <button
-                      key={btn.value}
-                      onClick={() => send(btn.value)}
-                      data-testid={`chat-button-${btn.value}`}
-                      className="text-xs px-3 py-1.5 rounded-full border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors font-medium"
-                    >
-                      {btn.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <p className="text-[10px] text-muted-foreground px-1">
-                {new Date(msg.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-              </p>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {isTyping && (
           <div className="flex justify-start">
@@ -221,7 +249,7 @@ export default function Chat() {
           />
           <button
             onClick={() => send(input)}
-            disabled={!input.trim() || sendMessage.isPending}
+            disabled={!input.trim() || sendMessage.isPending || isTyping}
             data-testid="button-send-message"
             className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 disabled:opacity-40 transition-opacity flex-shrink-0"
           >
