@@ -1,0 +1,118 @@
+You are editing an existing Gym Chat Assistant project.
+
+DO NOT rebuild the whole system.
+
+Current Situation:
+
+* Gym dashboard and management system already exist
+* Only chatbot logic needs improvement
+* Chatbot must connect with n8n webhook API
+* n8n webhook URL:
+  POST https://n8n.grindoverdreams.in/webhook/converso
+
+Goal:
+Connect the existing chatbot frontend with n8n so all chat messages are processed through the webhook API.
+
+Required Changes:
+
+1. Chatbot API Integration
+   When user sends a message:
+
+* Send POST request to:
+  https://n8n.grindoverdreams.in/webhook/converso
+
+Request Body Example:
+{
+"message": "Hi",
+"phone": "user_phone_number",
+"name": "user_name",
+"source": "gym_chatbot"
+}
+
+2. Handle API Response
+   The chatbot should:
+
+* Receive JSON response from n8n
+* Display bot reply in chat UI
+* Support plain text responses
+* Support button/menu responses
+* Support links
+
+Example Response:
+{
+"reply": "Welcome to Fit Gym 💪",
+"buttons": [
+"Membership Plans",
+"Register",
+"Gym Timing",
+"Location"
+]
+}
+
+3. Existing User Logic
+   If existing member:
+
+* Show:
+
+  * Diet Plan
+  * Exercise Plan
+  * Membership Status
+  * Expiry Date
+  * Attendance
+  * Trainer Details
+
+4. New User Logic
+   If new user:
+
+* Allow:
+
+  * Registration
+  * Gym timing inquiry
+  * Address inquiry
+  * Google map link
+  * Trial booking
+
+Map Link:
+https://share.google/xn74qajNaPA0gtmef
+
+5. Chatbot UI Improvements
+
+* Modern WhatsApp-style chat UI
+* Typing animation
+* Auto scroll
+* Message timestamps
+* Button reply system
+* Mobile responsive
+* Persistent chat history
+
+6. Session Management
+
+* Save session locally
+* Keep previous messages
+* Maintain user flow state
+
+7. Error Handling
+
+* If webhook fails:
+  Show:
+  "Server temporarily unavailable. Please try again."
+
+8. Important
+
+* Do not change existing dashboard system
+* Only edit chatbot functionality
+* Keep current UI theme/design
+* Create clean reusable API service structure
+* Separate chatbot API logic from UI components
+
+9. Technical Requirement
+   Create:
+
+* chatbot API service
+* webhook request handler
+* response parser
+* reusable message component
+* loading/typing component
+
+10. Final Goal
+    The chatbot should behave like a real gym WhatsApp assistant connected live with n8n automation backend.
