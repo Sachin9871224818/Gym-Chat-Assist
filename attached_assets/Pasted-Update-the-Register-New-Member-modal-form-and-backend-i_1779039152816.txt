@@ -1,0 +1,107 @@
+Update the “Register New Member” modal form and backend integration to fully match our n8n Data Table structure named `members`.
+
+This form must directly send data to the n8n webhook API so that every new member is stored inside the n8n Data Table correctly.
+
+Webhook Endpoint:
+POST https://n8n.grindoverdreams.in/webhook/gymbot
+
+Request Method:
+POST
+
+Headers:
+Content-Type: application/json
+x-api-key: skgym2026
+
+Required Form Fields:
+
+1. Full Name → `name`
+2. Phone Number → `phone`
+3. Age → `age`
+4. Gender → `gender`
+5. Weight (kg) → `weight`
+6. Height (cm) → `height`
+7. BMI → auto calculate using:
+   BMI = weight / ((height / 100) × (height / 100))
+   Save result in `bmi`
+8. Goal Dropdown → `goal`
+   Options:
+
+   * Weight Loss
+   * Muscle Gain
+   * Fat Loss
+9. Experience Level Dropdown → `experience_level`
+   Options:
+
+   * Beginner
+   * Intermediate
+   * Advanced
+10. Injury Notes → `injury_notes`
+11. Joining Date → `join_date`
+12. Membership Plan Dropdown → `membership_plan`
+    Options:
+
+* Monthly
+* Quarterly
+* Half Yearly
+* Yearly
+
+13. Membership Expiry → `membership_expiry`
+    Auto-calculate based on selected membership plan:
+
+* Monthly = +1 Month
+* Quarterly = +3 Months
+* Half Yearly = +6 Months
+* Yearly = +12 Months
+
+14. Payment Status Dropdown → `fee_status`
+    Options:
+
+* Paid
+* Pending
+
+15. Status → `status`
+    Default:
+
+* Active
+
+16. Assigned Trainer → `assigned_trainer`
+17. Created Time → `created_at`
+    Generate automatically in Indian timezone format.
+
+Payload Example:
+
+{
+"name": "Sachin",
+"phone": "919728640896",
+"age": 25,
+"gender": "Male",
+"weight": 72,
+"height": 175,
+"bmi": 23.5,
+"goal": "Weight Loss",
+"experience_level": "Beginner",
+"injury_notes": "None",
+"join_date": "2026-05-17",
+"membership_plan": "Monthly",
+"membership_expiry": "2026-06-17",
+"fee_status": "Paid",
+"status": "Active",
+"assigned_trainer": "Vikas Singh",
+"created_at": new Date().toISOString()
+}
+
+UI Requirements:
+
+* Keep the existing clean modern design.
+* Keep modal layout responsive.
+* Add proper validation for required fields.
+* Phone number should accept only numbers.
+* Auto-calculate BMI live while typing.
+* Auto-calculate membership expiry when plan changes.
+* Show loading state while submitting.
+* Show success toast after member registration.
+* Reset form after successful submission.
+* Use fetch() or axios for API integration.
+
+Important:
+The frontend form structure and payload must exactly match the n8n Data Table columns of the `members` table.
