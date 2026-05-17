@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, UserCheck,
-  ClipboardList, Salad, Dumbbell, Target, Megaphone, Menu, X, CreditCard
+  ClipboardList, Salad, Dumbbell, Target, Megaphone, Menu, X, CreditCard, MessageCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -15,6 +15,7 @@ const nav = [
   { href: "/workout-plans", icon: Dumbbell, label: "Workout Plans" },
   { href: "/leads", icon: Target, label: "Leads" },
   { href: "/broadcasts", icon: Megaphone, label: "Broadcasts" },
+  { href: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
