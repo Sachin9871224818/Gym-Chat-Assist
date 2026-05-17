@@ -70,6 +70,7 @@ export default function Membership() {
   const [contactLog, setContactLog] = useState<Record<number, ContactEntry[]>>(loadContactLog);
   const [bulkSending, setBulkSending] = useState(false);
   const [bulkResult, setBulkResult] = useState<{ sent: number; failed: number } | null>(null);
+  const [sendingId, setSendingId] = useState<number | null>(null);
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -155,6 +156,35 @@ export default function Membership() {
     const entries = contactLog[memberId];
     if (!entries?.length) return null;
     return entries[0];
+  }
+
+  async function sendSingleReminder(m: typeof expiringMembers[0]) {
+    setSendingId(m.id);
+    const webhookUrl = getWAWebhook("expiry_reminder");
+    const daysLeft = getDaysLeft(m.expiryDate);
+    try {
+      const res = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": WA_API_KEY },
+        body: JSON.stringify({
+          event: "expiry_reminder",
+          name: m.name,
+          phone: m.phone,
+          plan: m.plan,
+          expiry_date: m.expiryDate,
+          days_left: daysLeft,
+          source: "gym_dashboard_single",
+        }),
+      });
+      toast({
+        title: res.ok ? `Reminder sent to ${m.name}` : `Failed for ${m.name}`,
+        description: res.ok ? `WhatsApp reminder bhej diya gaya` : `HTTP ${res.status}`,
+        variant: res.ok ? "default" : "destructive",
+      });
+    } catch {
+      toast({ title: `Connection failed for ${m.name}`, variant: "destructive" });
+    }
+    setSendingId(null);
   }
 
   async function sendBulkReminders() {
@@ -368,10 +398,22 @@ export default function Membership() {
                       {daysLeft}d left
                     </span>
                     <button
+                      onClick={() => sendSingleReminder(m)}
+                      disabled={sendingId === m.id || bulkSending}
+                      title="WhatsApp reminder bhejo"
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#25D366] text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity font-medium"
+                    >
+                      {sendingId === m.id
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <Send className="w-3 h-3" />
+                      }
+                      WA
+                    </button>
+                    <button
                       onClick={() => { setContactId(m.id); setContactNote(""); setContactType("call"); }}
                       className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
                     >
-                      <Phone className="w-3 h-3" /> Log Contact
+                      <Phone className="w-3 h-3" /> Log
                     </button>
                     <button
                       onClick={() => { setRenewId(m.id); setRenewPlan(m.plan); setRenewPayment("paid"); }}
