@@ -359,7 +359,6 @@ export default function Members() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
               <div>
                 <h2 className="text-base font-bold text-foreground">Register New Member</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Syncs to n8n data table + local database</p>
               </div>
               <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
