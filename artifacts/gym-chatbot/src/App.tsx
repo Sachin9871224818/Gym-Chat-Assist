@@ -4,7 +4,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
-import Chat from "@/pages/Chat";
 import Members from "@/pages/Members";
 import MemberDetail from "@/pages/MemberDetail";
 import Trainers from "@/pages/Trainers";
@@ -28,7 +27,6 @@ function Router() {
     <Layout>
       <Switch>
         <Route path="/" component={Dashboard} />
-        <Route path="/chat" component={Chat} />
         <Route path="/members" component={Members} />
         <Route path="/members/:id" component={MemberDetail} />
         <Route path="/trainers" component={Trainers} />
