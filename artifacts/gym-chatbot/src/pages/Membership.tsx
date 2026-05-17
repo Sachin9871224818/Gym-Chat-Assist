@@ -5,10 +5,21 @@ import { Link } from "wouter";
 import {
   CreditCard, Users, AlertTriangle, CheckCircle, XCircle,
   ChevronRight, RefreshCw, IndianRupee, TrendingUp, Clock,
-  Search, Filter, Phone, MessageSquare, X, Bell
+  Search, Filter, Phone, MessageSquare, X, Bell, Loader2, Send
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+
+const WA_CONFIG_KEY = "fitpro_wa_config";
+const WA_API_KEY = "skgym2026";
+const DEFAULT_WA_WEBHOOK = "https://n8n.grindoverdreams.in/webhook/gymbot_marketing";
+
+function getWAWebhook(integrationId: string): string {
+  try {
+    const cfg = JSON.parse(localStorage.getItem(WA_CONFIG_KEY) ?? "{}");
+    return cfg[integrationId]?.webhookUrl || DEFAULT_WA_WEBHOOK;
+  } catch { return DEFAULT_WA_WEBHOOK; }
+}
 
 const PLANS = ["1 Month", "3 Months", "6 Months", "1 Year"];
 const PRICES: Record<string, number> = {
@@ -57,6 +68,8 @@ export default function Membership() {
   const [contactNote, setContactNote] = useState("");
   const [contactType, setContactType] = useState<ContactEntry["type"]>("call");
   const [contactLog, setContactLog] = useState<Record<number, ContactEntry[]>>(loadContactLog);
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ sent: number; failed: number } | null>(null);
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -142,6 +155,43 @@ export default function Membership() {
     const entries = contactLog[memberId];
     if (!entries?.length) return null;
     return entries[0];
+  }
+
+  async function sendBulkReminders() {
+    if (!expiringMembers.length || bulkSending) return;
+    setBulkSending(true);
+    setBulkResult(null);
+    const webhookUrl = getWAWebhook("expiry_reminder");
+    let sent = 0;
+    let failed = 0;
+    for (const m of expiringMembers) {
+      const daysLeft = getDaysLeft(m.expiryDate);
+      try {
+        const res = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": WA_API_KEY },
+          body: JSON.stringify({
+            event: "expiry_reminder",
+            name: m.name,
+            phone: m.phone,
+            plan: m.plan,
+            expiry_date: m.expiryDate,
+            days_left: daysLeft,
+            source: "gym_dashboard_bulk",
+          }),
+        });
+        res.ok ? sent++ : failed++;
+      } catch {
+        failed++;
+      }
+    }
+    setBulkSending(false);
+    setBulkResult({ sent, failed });
+    toast({
+      title: `WhatsApp Bulk Send Complete`,
+      description: `${sent} sent successfully${failed > 0 ? `, ${failed} failed` : ""}`,
+      variant: failed > 0 ? "destructive" : "default",
+    });
   }
 
   const renewingMember = members.find(m => m.id === renewId);
@@ -262,14 +312,33 @@ export default function Membership() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Expiry Reminders</p>
-              <p className="text-xs text-muted-foreground">{expiringMembers.length} member{expiringMembers.length > 1 ? "s" : ""} expiring within 30 days — follow up to retain them</p>
+              <p className="text-xs text-muted-foreground">
+                {expiringMembers.length} member{expiringMembers.length > 1 ? "s" : ""} expiring within 30 days
+                {bulkResult && (
+                  <span className="ml-2 text-emerald-600 font-medium">
+                    · Last bulk: {bulkResult.sent} sent{bulkResult.failed > 0 ? `, ${bulkResult.failed} failed` : ""}
+                  </span>
+                )}
+              </p>
             </div>
-            <button
-              onClick={() => setTileFilter("expiring")}
-              className="text-xs text-primary font-medium hover:underline"
-            >
-              Show in table
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={sendBulkReminders}
+                disabled={bulkSending || expiringMembers.length === 0}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#25D366] text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity font-medium"
+              >
+                {bulkSending
+                  ? <><Loader2 className="w-3 h-3 animate-spin" /> Sending…</>
+                  : <><Send className="w-3 h-3" /> WhatsApp All ({expiringMembers.length})</>
+                }
+              </button>
+              <button
+                onClick={() => setTileFilter("expiring")}
+                className="text-xs text-primary font-medium hover:underline"
+              >
+                Show in table
+              </button>
+            </div>
           </div>
 
           <div className="divide-y divide-border">
