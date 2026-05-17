@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const DEFAULT_WEBHOOK = "https://n8n.grindoverdreams.in/webhook/converso";
+const DEFAULT_WEBHOOK = "https://n8n.grindoverdreams.in/webhook/gymbot_marketing";
 const CONFIG_KEY = "fitpro_wa_config";
 const API_KEY = "skgym2026";
 
