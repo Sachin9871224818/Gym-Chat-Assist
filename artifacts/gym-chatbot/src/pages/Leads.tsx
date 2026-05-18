@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, RefreshCw, Target, Phone, Loader2 } from "lucide-react";
+import { Search, RefreshCw, Target, Phone, X, User, Goal, Tag, Calendar, Mail, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_COLORS: Record<string, string> = {
-  new: "bg-amber-100 text-amber-700",
-  contacted: "bg-blue-100 text-blue-700",
-  converted: "bg-emerald-100 text-emerald-700",
+  new: "bg-amber-100 text-amber-700 border-amber-200",
+  contacted: "bg-blue-100 text-blue-700 border-blue-200",
+  converted: "bg-emerald-100 text-emerald-700 border-emerald-200",
+};
+
+const STATUS_DOT: Record<string, string> = {
+  new: "bg-amber-400",
+  contacted: "bg-blue-400",
+  converted: "bg-emerald-400",
 };
 
 const STATUS_TABS = ["All", "New", "Contacted", "Converted"];
@@ -15,6 +21,103 @@ interface Lead {
   phone: string;
   goal?: string;
   status: string;
+  email?: string;
+  message?: string;
+  source?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+function DetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+  const statusKey = lead.status?.toLowerCase() ?? "";
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="w-full max-w-sm bg-background shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">Lead Details</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Avatar + Name */}
+        <div className="px-5 py-5 flex items-center gap-4 border-b border-border bg-muted/20">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-xl font-bold text-primary">
+            {lead.name?.[0]?.toUpperCase() ?? "?"}
+          </div>
+          <div>
+            <p className="text-base font-semibold text-foreground">{lead.name}</p>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border capitalize mt-1 ${STATUS_COLORS[statusKey] ?? "bg-muted text-muted-foreground border-border"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[statusKey] ?? "bg-muted-foreground"}`} />
+              {lead.status || "Unknown"}
+            </span>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <DetailRow icon={<Phone className="w-4 h-4" />} label="Phone" value={lead.phone} />
+          {lead.email && <DetailRow icon={<Mail className="w-4 h-4" />} label="Email" value={lead.email} />}
+          {lead.goal && <DetailRow icon={<Target className="w-4 h-4" />} label="Goal" value={lead.goal} />}
+          {lead.source && <DetailRow icon={<Tag className="w-4 h-4" />} label="Source" value={lead.source} />}
+          {lead.message && <DetailRow icon={<MessageSquare className="w-4 h-4" />} label="Message" value={lead.message} />}
+          {lead.createdAt && (
+            <DetailRow
+              icon={<Calendar className="w-4 h-4" />}
+              label="Date"
+              value={new Date(lead.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            />
+          )}
+
+          {/* Extra fields from API */}
+          {Object.entries(lead)
+            .filter(([k]) => !["name", "phone", "goal", "status", "email", "message", "source", "createdAt"].includes(k))
+            .map(([k, v]) => v ? (
+              <DetailRow key={k} icon={<User className="w-4 h-4" />} label={k.charAt(0).toUpperCase() + k.slice(1)} value={String(v)} />
+            ) : null)}
+        </div>
+
+        {/* Actions */}
+        <div className="px-5 py-4 border-t border-border flex gap-2">
+          <a
+            href={`https://wa.me/${lead.phone?.replace(/\D/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-2.5 text-sm font-medium text-center bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+          >
+            WhatsApp
+          </a>
+          <a
+            href={`tel:${lead.phone}`}
+            className="flex-1 py-2.5 text-sm font-medium text-center border border-input rounded-lg hover:bg-muted transition-colors"
+          >
+            Call
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 text-muted-foreground flex-shrink-0">{icon}</div>
+      <div>
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <p className="text-sm font-medium text-foreground break-all">{value}</p>
+      </div>
+    </div>
+  );
 }
 
 export default function Leads() {
@@ -23,6 +126,7 @@ export default function Leads() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState("All");
+  const [selected, setSelected] = useState<Lead | null>(null);
   const { toast } = useToast();
 
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
@@ -52,8 +156,8 @@ export default function Leads() {
   const filtered = leads.filter(lead => {
     const matchesSearch =
       !search ||
-      lead.name.toLowerCase().includes(search.toLowerCase()) ||
-      lead.phone.includes(search);
+      lead.name?.toLowerCase().includes(search.toLowerCase()) ||
+      lead.phone?.includes(search);
     const matchesStatus =
       statusTab === "All" ||
       lead.status?.toLowerCase() === statusTab.toLowerCase();
@@ -64,7 +168,6 @@ export default function Leads() {
     <div className="p-6 space-y-5">
       {/* Top Bar */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        {/* Status Tabs */}
         <div className="flex gap-2 flex-wrap">
           {STATUS_TABS.map(tab => (
             <button
@@ -81,7 +184,6 @@ export default function Leads() {
           ))}
         </div>
 
-        {/* Search + Refresh */}
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -105,27 +207,20 @@ export default function Leads() {
 
       {/* Content */}
       {loading ? (
-        <div className="bg-card border border-card-border rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                {["Name", "Phone", "Goal", "Status"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  {Array.from({ length: 4 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-muted rounded animate-pulse" />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-card border border-card-border rounded-xl p-4 space-y-3 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 bg-muted rounded w-2/3" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                </div>
+              </div>
+              <div className="h-3 bg-muted rounded w-3/4" />
+              <div className="h-6 bg-muted rounded w-1/3" />
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="bg-card border border-card-border rounded-xl py-16 text-center space-y-3">
@@ -150,52 +245,58 @@ export default function Leads() {
           )}
         </div>
       ) : (
-        <div className="bg-card border border-card-border rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border bg-muted/20 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">{filtered.length} lead{filtered.length !== 1 ? "s" : ""}</p>
+        <>
+          <p className="text-xs text-muted-foreground">{filtered.length} lead{filtered.length !== 1 ? "s" : ""}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map((lead, i) => {
+              const statusKey = lead.status?.toLowerCase() ?? "";
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelected(lead)}
+                  className="bg-card border border-card-border rounded-xl p-4 text-left hover:shadow-md hover:border-primary/30 transition-all group"
+                >
+                  {/* Avatar + Name */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 font-bold text-primary text-sm group-hover:bg-primary/20 transition-colors">
+                      {lead.name?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-foreground truncate">{lead.name}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{lead.phone}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Goal */}
+                  {lead.goal && (
+                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
+                      <Target className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{lead.goal}</span>
+                    </p>
+                  )}
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border capitalize ${STATUS_COLORS[statusKey] ?? "bg-muted text-muted-foreground border-border"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[statusKey] ?? "bg-muted-foreground"}`} />
+                      {lead.status || "—"}
+                    </span>
+                    <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                      View →
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Phone</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Goal</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((lead, i) => (
-                  <tr key={i} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-primary">{lead.name?.[0]?.toUpperCase() ?? "?"}</span>
-                        </div>
-                        <p className="font-medium text-foreground">{lead.name}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell">
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Phone className="w-3 h-3" />
-                        {lead.phone}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                      {lead.goal || "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${STATUS_COLORS[lead.status?.toLowerCase()] ?? "bg-muted text-muted-foreground"}`}>
-                        {lead.status || "—"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        </>
       )}
+
+      {/* Detail Drawer */}
+      {selected && <DetailDrawer lead={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
