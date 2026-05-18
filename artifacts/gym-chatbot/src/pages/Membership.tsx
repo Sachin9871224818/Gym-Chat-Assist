@@ -169,6 +169,16 @@ export default function Membership() {
     return entries[0];
   }
 
+  function buildReminderPayload(m: { name: string; phone: string; plan: string; expiryDate: string }, daysLeft: number) {
+    const rawPhone = m.phone.replace(/\D/g, "");
+    const phone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+    const expiryFormatted = new Date(m.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    const message =
+      `Hi ${m.name}! 🔔 Aapki FitPro Gym membership (${m.plan}) sirf *${daysLeft} din* mein expire hogi — ${expiryFormatted}.\n\n` +
+      `Abhi renew karein aur apni fitness journey jaari rakhein! 💪\n\nRenew ke liye call karein ya gym par aaiye.`;
+    return { phone, name: m.name, message, event: "expiry_reminder", days_left: daysLeft, plan: m.plan, expiry_date: m.expiryDate };
+  }
+
   async function sendSingleReminder(m: typeof expiringMembers[0]) {
     setSendingId(m.id);
     const proxyUrl = toProxyUrl(getWAWebhook("expiry_reminder"));
@@ -177,23 +187,17 @@ export default function Membership() {
       const res = await fetch(proxyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "expiry_reminder",
-          name: m.name,
-          phone: m.phone,
-          plan: m.plan,
-          expiry_date: m.expiryDate,
-          days_left: daysLeft,
-          source: "gym_dashboard_single",
-        }),
+        body: JSON.stringify(buildReminderPayload(m, daysLeft)),
       });
       toast({
         title: res.ok ? `Reminder sent to ${m.name}` : `Failed for ${m.name}`,
-        description: res.ok ? `WhatsApp reminder bhej diya gaya` : `HTTP ${res.status}`,
+        description: res.ok
+          ? `WhatsApp reminder bhej diya gaya`
+          : `HTTP ${res.status} — WhatsApp page pe webhook URL configure karein`,
         variant: res.ok ? "default" : "destructive",
       });
     } catch {
-      toast({ title: `Connection failed for ${m.name}`, variant: "destructive" });
+      toast({ title: `${m.name} ke liye connection failed`, description: "API server ya n8n reachable nahi hai", variant: "destructive" });
     }
     setSendingId(null);
   }
@@ -211,15 +215,7 @@ export default function Membership() {
         const res = await fetch(proxyUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event: "expiry_reminder",
-            name: m.name,
-            phone: m.phone,
-            plan: m.plan,
-            expiry_date: m.expiryDate,
-            days_left: daysLeft,
-            source: "gym_dashboard_bulk",
-          }),
+          body: JSON.stringify(buildReminderPayload(m, daysLeft)),
         });
         res.ok ? sent++ : failed++;
       } catch {

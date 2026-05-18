@@ -82,7 +82,15 @@ const INTEGRATIONS: Integration[] = [
     name: "Expiry Reminder",
     description: "Membership expire hone se pehle member ko WhatsApp reminder bhejo aur renew karne ka option do.",
     trigger: "Expiry se 7, 15 aur 30 din pehle (automatic)",
-    testPayload: { event: "expiry_reminder", name: "Test Member", phone: "9999999999", expiry_date: "2026-06-01", days_left: 7, plan: "Monthly", source: "gym_dashboard" },
+    testPayload: {
+      phone: "919999999999",
+      name: "Test Member",
+      message: "Hi Test Member! 🔔 Aapki FitPro Gym membership (Monthly plan) sirf *7 din* mein expire hogi — 1 June 2026.\n\nAbhi renew karein aur apni fitness journey jaari rakhein! 💪\n\nRenew ke liye call karein ya gym par aaiye.",
+      event: "expiry_reminder",
+      days_left: 7,
+      plan: "Monthly",
+      expiry_date: "2026-06-01",
+    },
   },
   {
     id: "renewal_confirm",
