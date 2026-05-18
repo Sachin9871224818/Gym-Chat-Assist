@@ -21,6 +21,17 @@ function getWAWebhook(integrationId: string): string {
   } catch { return DEFAULT_WA_WEBHOOK; }
 }
 
+function toProxyUrl(fullUrl: string): string {
+  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  try {
+    const url = new URL(fullUrl);
+    const match = url.pathname.match(/\/webhook\/(.+)/);
+    if (match) return `${base}/api/webhook-proxy/${match[1]}`;
+  } catch { /* ignore */ }
+  const seg = fullUrl.split("/").filter(Boolean).pop() ?? "gymbot_marketing";
+  return `${base}/api/webhook-proxy/${seg}`;
+}
+
 const PLANS = ["1 Month", "3 Months", "6 Months", "1 Year"];
 const PRICES: Record<string, number> = {
   "1 Month": 2000,
@@ -160,12 +171,12 @@ export default function Membership() {
 
   async function sendSingleReminder(m: typeof expiringMembers[0]) {
     setSendingId(m.id);
-    const webhookUrl = getWAWebhook("expiry_reminder");
+    const proxyUrl = toProxyUrl(getWAWebhook("expiry_reminder"));
     const daysLeft = getDaysLeft(m.expiryDate);
     try {
-      const res = await fetch(webhookUrl, {
+      const res = await fetch(proxyUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": WA_API_KEY },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           event: "expiry_reminder",
           name: m.name,
@@ -191,15 +202,15 @@ export default function Membership() {
     if (!expiringMembers.length || bulkSending) return;
     setBulkSending(true);
     setBulkResult(null);
-    const webhookUrl = getWAWebhook("expiry_reminder");
+    const proxyUrl = toProxyUrl(getWAWebhook("expiry_reminder"));
     let sent = 0;
     let failed = 0;
     for (const m of expiringMembers) {
       const daysLeft = getDaysLeft(m.expiryDate);
       try {
-        const res = await fetch(webhookUrl, {
+        const res = await fetch(proxyUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": WA_API_KEY },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             event: "expiry_reminder",
             name: m.name,

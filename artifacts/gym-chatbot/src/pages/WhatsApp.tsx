@@ -8,7 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_WEBHOOK = "https://n8n.grindoverdreams.in/webhook/gymbot_marketing";
 const CONFIG_KEY = "fitpro_wa_config";
-const API_KEY = "skgym2026";
+
+function toProxyUrl(fullUrl: string): string {
+  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  try {
+    const url = new URL(fullUrl);
+    const match = url.pathname.match(/\/webhook\/(.+)/);
+    if (match) return `${base}/api/webhook-proxy/${match[1]}`;
+  } catch { /* ignore */ }
+  const seg = fullUrl.split("/").filter(Boolean).pop() ?? "gymbot_marketing";
+  return `${base}/api/webhook-proxy/${seg}`;
+}
 
 interface IntegrationConfig {
   enabled: boolean;
@@ -193,12 +203,12 @@ export default function WhatsApp() {
 
   async function testSend(integration: Integration) {
     const cfg = getIntConfig(integration.id);
-    const url = cfg.webhookUrl || DEFAULT_WEBHOOK;
+    const proxyUrl = toProxyUrl(cfg.webhookUrl || DEFAULT_WEBHOOK);
     setTesting(integration.id);
     try {
-      const res = await fetch(url, {
+      const res = await fetch(proxyUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(integration.testPayload),
       });
       if (res.ok) {

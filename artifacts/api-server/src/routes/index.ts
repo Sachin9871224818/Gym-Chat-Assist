@@ -8,6 +8,7 @@ import plansRouter from "./plans";
 import leadsRouter from "./leads";
 import broadcastsRouter from "./broadcasts";
 import dashboardRouter from "./dashboard";
+import webhookProxyRouter from "./webhookProxy";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(plansRouter);
 router.use(leadsRouter);
 router.use(broadcastsRouter);
 router.use(dashboardRouter);
+router.use(webhookProxyRouter);
 
 export default router;
