@@ -172,11 +172,14 @@ export default function Membership() {
   function buildReminderPayload(m: { name: string; phone: string; plan: string; expiryDate: string }, daysLeft: number) {
     const rawPhone = m.phone.replace(/\D/g, "");
     const phone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
-    const expiryFormatted = new Date(m.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-    const message =
-      `Hi ${m.name}! 🔔 Aapki FitPro Gym membership (${m.plan}) sirf *${daysLeft} din* mein expire hogi — ${expiryFormatted}.\n\n` +
-      `Abhi renew karein aur apni fitness journey jaari rakhein! 💪\n\nRenew ke liye call karein ya gym par aaiye.`;
-    return { phone, name: m.name, message, event: "expiry_reminder", days_left: daysLeft, plan: m.plan, expiry_date: m.expiryDate };
+    return {
+      event: "expiry_reminder",
+      name: m.name,
+      phone,
+      membership_plan: m.plan,
+      expiry_in_days: daysLeft,
+      expiry_date: m.expiryDate,
+    };
   }
 
   async function sendSingleReminder(m: typeof expiringMembers[0]) {

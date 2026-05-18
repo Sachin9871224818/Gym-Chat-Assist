@@ -1,0 +1,143 @@
+SYSTEM UPDATE — WhatsApp Messaging Architecture Refactor
+
+Goal:
+Remove all ready-made WhatsApp message text generation from Replit backend/API responses.
+
+New architecture:
+- Replit/backend should ONLY send clean structured data to n8n
+- n8n will fully control:
+  - WhatsApp templates
+  - Interactive buttons
+  - Message body text
+  - Personalization
+  - Reminder formatting
+  - CTA logic
+
+Reason:
+Meta WhatsApp template system only allows approved templates.
+Dynamic message generation from backend is not scalable.
+n8n should become the single messaging engine.
+
+--------------------------------------------------
+NEW RESPONSE STANDARD
+--------------------------------------------------
+
+Every API/webhook response should ONLY return clean JSON data.
+
+❌ REMOVE:
+- full WhatsApp message text
+- formatted message body
+- emojis
+- multiline WhatsApp content
+- CTA text
+- conversational sentences
+
+✅ KEEP ONLY:
+- identifiers
+- customer data
+- status
+- event type
+- dates
+- counts
+- values
+- expiry info
+- plans
+- names
+- phones
+
+--------------------------------------------------
+EXAMPLE — SUBSCRIPTION EXPIRY REMINDER
+--------------------------------------------------
+
+OLD RESPONSE:
+{
+  "phone": "918700123362",
+  "name": "Anuj",
+  "message": "Hi Anuj! 👋 Aapki membership...",
+  "event": "expiry_reminder",
+  "days_left": 30,
+  "plan": "1 Month",
+  "expiry_date": "2026-06-17"
+}
+
+NEW RESPONSE:
+{
+  "event": "expiry_reminder",
+  "name": "Anuj",
+  "phone": "918700123362",
+  "membership_plan": "1 Month",
+  "expiry_in_days": 30,
+  "expiry_date": "2026-06-17"
+}
+
+n8n will generate the actual WhatsApp template message.
+
+--------------------------------------------------
+APPLY THIS EVERYWHERE
+--------------------------------------------------
+
+Refactor all modules/features:
+
+1. Membership expiry reminders
+2. Renewal reminders
+3. Lead follow-up
+4. Attendance notifications
+5. Trial booking
+6. Payment reminders
+7. Welcome messages
+8. Admin alerts
+9. Workout reminders
+10. Diet reminders
+11. Trainer notifications
+12. Broadcast campaigns
+
+All APIs/webhooks should now return ONLY clean structured data.
+
+--------------------------------------------------
+STANDARD API RESPONSE RULES
+--------------------------------------------------
+
+- Use flat JSON whenever possible
+- Use predictable keys
+- No formatted text blobs
+- No presentation logic
+- No WhatsApp-specific formatting
+- No emoji content
+- No button labels
+- No markdown
+- No message templates
+
+--------------------------------------------------
+RECOMMENDED UNIVERSAL STRUCTURE
+--------------------------------------------------
+
+{
+  "event": "event_name",
+  "name": "customer_name",
+  "phone": "919XXXXXXXXX",
+  "status": "active",
+  "membership_plan": "1 Month",
+  "days_left": 7,
+  "expiry_date": "2026-06-17"
+}
+
+--------------------------------------------------
+N8N RESPONSIBILITY
+--------------------------------------------------
+
+n8n will now handle:
+- WhatsApp template selection
+- Interactive button generation
+- Dynamic variables
+- Localization
+- Hindi/English formatting
+- CTA logic
+- Main menu buttons
+- Payment links
+- Retry logic
+
+Backend/Replit becomes:
+DATA SOURCE ONLY
+
+n8n becomes:
+MESSAGING ENGINE

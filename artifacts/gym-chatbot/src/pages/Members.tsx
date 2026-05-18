@@ -150,9 +150,13 @@ export default function Members() {
     const selectedPlan = PLAN_OPTIONS.find(p => p.value === form.membership_plan)!;
     const bmiNum = form.bmi ? parseFloat(form.bmi) : 0;
 
+    const rawPhone = form.phone.replace(/\D/g, "");
+    const phone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+
     const n8nPayload = {
+      event: "member_welcome",
       name: form.name.trim(),
-      phone: form.phone.replace(/\s/g, ""),
+      phone,
       age: Number(form.age),
       gender: form.gender,
       weight: form.weight ? Number(form.weight) : null,
@@ -160,14 +164,13 @@ export default function Members() {
       bmi: bmiNum || null,
       goal: form.goal,
       experience_level: form.experience_level,
-      injury_notes: form.injury_notes.trim() || "None",
+      injury_notes: form.injury_notes.trim() || null,
       join_date: form.join_date,
       membership_plan: form.membership_plan,
-      membership_expiry: form.membership_expiry,
-      fee_status: form.fee_status,
-      status: "Active",
-      assigned_trainer: form.assigned_trainer || "",
-      created_at: getISTTimestamp(),
+      expiry_date: form.membership_expiry,
+      payment_status: form.fee_status,
+      status: "active",
+      assigned_trainer: form.assigned_trainer || null,
     };
 
     const localPayload = {
