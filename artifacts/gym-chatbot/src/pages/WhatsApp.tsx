@@ -40,6 +40,7 @@ interface Integration {
   name: string;
   description: string;
   trigger: string;
+  webhookUrl?: string;
   testPayload: Record<string, unknown>;
 }
 
@@ -252,11 +253,21 @@ const INTEGRATIONS: Integration[] = [
     name: "Bulk Broadcast",
     description: "Saare ya selected members ko ek saath WhatsApp pe custom message bhejo — offers, announcements, etc.",
     trigger: "Manual trigger (dashboard se)",
+    webhookUrl: "https://n8n.grindoverdreams.in/webhook/gymbot_broadcast",
     testPayload: {
-      event: "bulk_broadcast",
-      target: "all_members",
-      total_recipients: 50,
-      campaign_name: "May Offer 2026",
+      broadcast: {
+        id: 1,
+        title: "May Offer 2026",
+        message: "Is month join karo aur 20% discount pao!",
+        type: "offer",
+        targetAudience: "all",
+        sentCount: 2,
+        createdAt: new Date().toISOString(),
+      },
+      members: [
+        { name: "Test Member 1", phone: "919999999999" },
+        { name: "Test Member 2", phone: "918888888888" },
+      ],
     },
   },
 ];
@@ -288,7 +299,8 @@ export default function WhatsApp() {
 
   async function testSend(integration: Integration) {
     const cfg = getIntConfig(integration.id);
-    const proxyUrl = toProxyUrl(cfg.webhookUrl || DEFAULT_WEBHOOK);
+    const effectiveWebhook = cfg.webhookUrl || integration.webhookUrl || DEFAULT_WEBHOOK;
+    const proxyUrl = toProxyUrl(effectiveWebhook);
     setTesting(integration.id);
     try {
       const res = await fetch(proxyUrl, {
@@ -422,9 +434,9 @@ export default function WhatsApp() {
                         <div className="mt-3 pt-3 border-t border-border space-y-2">
                           <label className="text-xs font-medium text-muted-foreground">n8n Webhook URL</label>
                           <input
-                            value={cfg.webhookUrl || DEFAULT_WEBHOOK}
+                            value={cfg.webhookUrl || integration.webhookUrl || DEFAULT_WEBHOOK}
                             onChange={e => setWebhook(integration.id, e.target.value)}
-                            placeholder={DEFAULT_WEBHOOK}
+                            placeholder={integration.webhookUrl || DEFAULT_WEBHOOK}
                             className="w-full text-xs px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
                           />
                           <div className="text-[10px] text-muted-foreground">
