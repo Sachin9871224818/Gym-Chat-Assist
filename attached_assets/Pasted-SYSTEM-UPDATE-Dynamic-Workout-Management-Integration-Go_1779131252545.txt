@@ -1,0 +1,229 @@
+SYSTEM UPDATE — Dynamic Workout Management Integration
+
+Goal:
+Completely refactor the Workout Plans module to use n8n Data Tables as the single source of truth.
+
+The frontend/admin panel should NO LONGER use:
+- hardcoded workout arrays
+- local JSON workout files
+- static mock exercise data
+
+All exercise data must now come directly from n8n webhooks.
+
+--------------------------------------------------
+N8N WEBHOOKS
+--------------------------------------------------
+
+1. GET ALL EXERCISES
+
+Method:
+GET
+
+URL:
+https://n8n.grindoverdreams.in/webhook/gymbot_exercises
+
+Purpose:
+Fetch all workout plans dynamically.
+
+--------------------------------------------------
+
+2. ADD EXERCISE
+
+Method:
+POST
+
+URL:
+https://n8n.grindoverdreams.in/webhook/gymbot_exercise_add
+
+Purpose:
+Insert new workout into n8n Data Table.
+
+Request Body:
+{
+  "exercise_id": "1_1",
+  "category": "chest",
+  "level": "beginner",
+  "title": "Chest Beginner",
+  "description": "Workout Description"
+}
+
+--------------------------------------------------
+
+3. UPDATE EXERCISE
+
+Method:
+POST
+
+URL:
+https://n8n.grindoverdreams.in/webhook/gymbot_exercise_update
+
+Purpose:
+Update existing workout.
+
+Request Body:
+{
+  "exercise_id": "1_1",
+  "category": "chest",
+  "level": "advanced",
+  "title": "Chest Advanced",
+  "description": "Updated Workout"
+}
+
+--------------------------------------------------
+
+4. DELETE EXERCISE
+
+Method:
+POST
+
+URL:
+https://n8n.grindoverdreams.in/webhook/gymbot_exercise_delete
+
+Purpose:
+Delete workout from n8n Data Table.
+
+Request Body:
+{
+  "exercise_id": "1_1"
+}
+
+--------------------------------------------------
+DATA TABLE STRUCTURE
+--------------------------------------------------
+
+Table:
+gymbot_exercises
+
+Columns:
+- exercise_id
+- category
+- level
+- title
+- description
+
+--------------------------------------------------
+EXERCISE ID FORMAT
+--------------------------------------------------
+
+Use structured IDs instead of serial numbers.
+
+Format:
+categoryNumber_levelNumber
+
+Examples:
+
+1_1 = Chest Beginner
+1_2 = Chest Advanced
+
+2_1 = Back Beginner
+2_2 = Back Advanced
+
+3_1 = Legs Beginner
+3_2 = Legs Advanced
+
+4_1 = Shoulder Beginner
+4_2 = Shoulder Advanced
+
+5_1 = Biceps Beginner
+5_2 = Biceps Advanced
+
+6_1 = Triceps Beginner
+6_2 = Triceps Advanced
+
+7_1 = Abs Beginner
+7_2 = Abs Advanced
+
+8_1 = Cardio Beginner
+8_2 = Cardio Advanced
+
+--------------------------------------------------
+FRONTEND REQUIREMENTS
+--------------------------------------------------
+
+Create centralized API service:
+
+- fetchExercises()
+- addExercise()
+- updateExercise()
+- deleteExercise()
+
+Use fetch API or axios.
+
+--------------------------------------------------
+WORKOUT PAGE REQUIREMENTS
+--------------------------------------------------
+
+1. Fetch exercises dynamically from:
+GET /gymbot_exercises
+
+2. Group exercises by category.
+
+3. Show:
+- title
+- level
+- description preview
+
+4. Remove all static/mock data.
+
+5. Data must auto-refresh after:
+- add
+- update
+- delete
+
+--------------------------------------------------
+ADMIN PANEL REQUIREMENTS
+--------------------------------------------------
+
+Admin should be able to:
+
+✅ Add Exercise
+✅ Edit Exercise
+✅ Delete Exercise
+
+Admin Form Fields:
+- exercise_id
+- category
+- level
+- title
+- description
+
+--------------------------------------------------
+UI REQUIREMENTS
+--------------------------------------------------
+
+Workout Card:
+- Exercise title
+- Category badge
+- Level badge
+- Description
+- Edit button
+- Delete button
+
+--------------------------------------------------
+IMPORTANT ARCHITECTURE RULE
+--------------------------------------------------
+
+n8n Data Tables =
+SOURCE OF TRUTH
+
+Frontend =
+VIEW + CONTROL PANEL ONLY
+
+Never store workout data locally again.
+
+--------------------------------------------------
+FUTURE READY DESIGN
+--------------------------------------------------
+
+Keep architecture expandable for future fields:
+- image_url
+- video_url
+- trainer_notes
+- calories
+- workout_duration
+- difficulty
+- equipment_required
+- injury_safe
+- target_muscle
+
+Design API handling dynamically.
