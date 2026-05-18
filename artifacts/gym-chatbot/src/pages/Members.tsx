@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   useListMembers, useCreateMember, useDeleteMember,
   useListTrainers, getListMembersQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Search, ChevronRight, Trash2, Loader2, Calculator, X } from "lucide-react";
+import { Plus, Search, ChevronRight, Trash2, Loader2, Calculator, X, Upload, Download, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const N8N_WEBHOOK = "https://n8n.grindoverdreams.in/webhook/gymbot";
@@ -81,6 +81,65 @@ const INITIAL_FORM: FormState = {
   assigned_trainer: "",
 };
 
+interface CsvRow {
+  name: string;
+  phone: string;
+  age: string;
+  gender: string;
+  weight?: string;
+  height?: string;
+  goal?: string;
+  plan: string;
+  joiningDate: string;
+  paymentStatus: string;
+  email?: string;
+}
+
+const CSV_TEMPLATE_HEADERS = "name,phone,age,gender,weight,height,goal,plan,joiningDate,paymentStatus,email";
+const CSV_TEMPLATE_EXAMPLE = "Rahul Sharma,9876543210,28,male,75,175,Weight Loss,1 Month,2026-05-01,paid,rahul@example.com";
+
+function parseCsv(text: string): CsvRow[] {
+  const lines = text.trim().split("\n").filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ""));
+  const headerMap: Record<string, string> = {
+    name: "name", phone: "phone", mobileno: "phone", mobile: "phone",
+    age: "age", gender: "gender", sex: "gender",
+    weight: "weight", weightkg: "weight",
+    height: "height", heightcm: "height",
+    goal: "goal", fitness: "goal",
+    plan: "plan", membershipplan: "plan", membership: "plan",
+    joiningdate: "joiningDate", joindate: "joiningDate", joineddate: "joiningDate",
+    paymentstatus: "paymentStatus", feestatus: "paymentStatus", payment: "paymentStatus",
+    email: "email",
+  };
+  return lines.slice(1).map(line => {
+    const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+    const row: Record<string, string> = {};
+    headers.forEach((h, i) => {
+      const key = headerMap[h] ?? h;
+      row[key] = vals[i] ?? "";
+    });
+    const plan = row.plan || "1 Month";
+    const normalized = plan.toLowerCase();
+    let normalizedPlan = plan;
+    if (normalized.includes("month") && normalized.includes("3")) normalizedPlan = "3 Months";
+    else if (normalized.includes("month") && normalized.includes("6")) normalizedPlan = "6 Months";
+    else if (normalized.includes("year") || normalized.includes("12")) normalizedPlan = "1 Year";
+    else if (normalized.includes("month")) normalizedPlan = "1 Month";
+    return { ...row, plan: normalizedPlan } as CsvRow;
+  }).filter(r => r.name && r.phone);
+}
+
+function downloadTemplate() {
+  const csv = `${CSV_TEMPLATE_HEADERS}\n${CSV_TEMPLATE_EXAMPLE}`;
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "members_import_template.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Members() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -89,8 +148,56 @@ export default function Members() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [importOpen, setImportOpen] = useState(false);
+  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
+  const [csvError, setCsvError] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ inserted: number; failed: { row: number; error: string }[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith(".csv")) { setCsvError("Only .csv files are supported."); return; }
+    setCsvError(""); setImportResult(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const rows = parseCsv(text);
+      if (rows.length === 0) { setCsvError("No valid rows found. Check the file format."); setCsvRows([]); }
+      else { setCsvRows(rows); }
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleImport() {
+    if (csvRows.length === 0) return;
+    setImporting(true);
+    try {
+      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/members/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(csvRows),
+      });
+      const result = await res.json();
+      setImportResult(result);
+      if (result.inserted > 0) {
+        qc.invalidateQueries({ queryKey: getListMembersQueryKey() });
+        toast({ title: `${result.inserted} members imported successfully!` });
+      }
+    } catch {
+      setCsvError("Import failed. Please try again.");
+    }
+    setImporting(false);
+  }
+
+  function resetImport() {
+    setCsvRows([]); setCsvError(""); setImportResult(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   const params = {
     ...(search ? { search } : {}),
@@ -272,12 +379,20 @@ export default function Members() {
             {PLAN_OPTIONS.map(p => <option key={p.value} value={p.localValue}>{p.label}</option>)}
           </select>
         </div>
-        <button
-          onClick={() => { setForm(INITIAL_FORM); setErrors({}); setOpen(true); }}
-          className="flex items-center gap-1.5 text-sm px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
-        >
-          <Plus className="w-4 h-4" /> Add Member
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { resetImport(); setImportOpen(true); }}
+            className="flex items-center gap-1.5 text-sm px-4 py-2 border border-input rounded-lg hover:bg-muted transition-colors font-medium"
+          >
+            <Upload className="w-4 h-4" /> Import CSV
+          </button>
+          <button
+            onClick={() => { setForm(INITIAL_FORM); setErrors({}); setOpen(true); }}
+            className="flex items-center gap-1.5 text-sm px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            <Plus className="w-4 h-4" /> Add Member
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -564,6 +679,163 @@ export default function Members() {
                   "Register Member"
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import CSV Modal */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+              <div>
+                <h2 className="text-base font-bold text-foreground">Import Members from CSV</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Bulk add members by uploading a .csv file</p>
+              </div>
+              <button onClick={() => setImportOpen(false)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+              {/* Template Download */}
+              <div className="bg-muted/40 border border-border rounded-xl p-4 flex items-center gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Download Template</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Required columns: <code className="bg-muted px-1 rounded text-[11px]">name, phone, age, gender, plan, joiningDate, paymentStatus</code>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Plan values: <code className="bg-muted px-1 rounded text-[11px]">1 Month</code> · <code className="bg-muted px-1 rounded text-[11px]">3 Months</code> · <code className="bg-muted px-1 rounded text-[11px]">6 Months</code> · <code className="bg-muted px-1 rounded text-[11px]">1 Year</code>
+                  </p>
+                </div>
+                <button
+                  onClick={downloadTemplate}
+                  className="flex items-center gap-1.5 text-xs px-3 py-2 border border-input rounded-lg hover:bg-muted transition-colors font-medium flex-shrink-0"
+                >
+                  <Download className="w-3.5 h-3.5" /> Sample CSV
+                </button>
+              </div>
+
+              {/* File Upload */}
+              {!importResult && (
+                <div
+                  className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm font-medium text-foreground">Click to upload CSV file</p>
+                  <p className="text-xs text-muted-foreground mt-1">Only .csv files supported</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </div>
+              )}
+
+              {/* CSV Error */}
+              {csvError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {csvError}
+                </div>
+              )}
+
+              {/* Import Result */}
+              {importResult && (
+                <div className="space-y-3">
+                  <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${importResult.inserted > 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+                    <CheckCircle className={`w-5 h-5 flex-shrink-0 ${importResult.inserted > 0 ? "text-emerald-600" : "text-red-500"}`} />
+                    <div>
+                      <p className={`text-sm font-semibold ${importResult.inserted > 0 ? "text-emerald-700" : "text-red-600"}`}>
+                        {importResult.inserted} members imported successfully
+                      </p>
+                      {importResult.failed.length > 0 && (
+                        <p className="text-xs text-red-500 mt-0.5">{importResult.failed.length} rows failed</p>
+                      )}
+                    </div>
+                  </div>
+                  {importResult.failed.length > 0 && (
+                    <div className="bg-muted/40 rounded-xl p-3 space-y-1 max-h-32 overflow-y-auto">
+                      {importResult.failed.map(f => (
+                        <p key={f.row} className="text-xs text-red-500">Row {f.row}: {f.error}</p>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={resetImport} className="text-sm text-primary hover:underline">
+                    Import another file
+                  </button>
+                </div>
+              )}
+
+              {/* Preview Table */}
+              {csvRows.length > 0 && !importResult && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-foreground uppercase tracking-wide">{csvRows.length} rows ready to import</p>
+                    <button onClick={resetImport} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+                  </div>
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto max-h-52">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-muted/40 border-b border-border">
+                            {["#", "Name", "Phone", "Age", "Gender", "Plan", "Joining Date", "Payment"].map(h => (
+                              <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {csvRows.map((r, i) => (
+                            <tr key={i} className="hover:bg-muted/20">
+                              <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
+                              <td className="px-3 py-2 font-medium text-foreground">{r.name}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{r.phone}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{r.age || "—"}</td>
+                              <td className="px-3 py-2 text-muted-foreground capitalize">{r.gender || "—"}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{r.plan}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{r.joiningDate || "—"}</td>
+                              <td className="px-3 py-2">
+                                <span className={`px-1.5 py-0.5 rounded-full font-medium capitalize ${r.paymentStatus?.toLowerCase() === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                                  {r.paymentStatus || "paid"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-border flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => setImportOpen(false)}
+                className="flex-1 py-2.5 text-sm border border-input rounded-xl hover:bg-muted transition-colors"
+              >
+                Close
+              </button>
+              {csvRows.length > 0 && !importResult && (
+                <button
+                  onClick={handleImport}
+                  disabled={importing}
+                  className="flex-1 py-2.5 text-sm bg-primary text-primary-foreground rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity font-medium flex items-center justify-center gap-2"
+                >
+                  {importing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Importing...</>
+                  ) : (
+                    <><Upload className="w-4 h-4" /> Import {csvRows.length} Members</>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

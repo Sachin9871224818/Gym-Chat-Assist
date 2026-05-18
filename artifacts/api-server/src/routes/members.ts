@@ -102,6 +102,45 @@ router.patch("/members/:id", async (req, res) => {
   return res.json(await enrichMember(member));
 });
 
+// POST /api/members/import
+router.post("/members/import", async (req, res) => {
+  const rows: Array<Record<string, unknown>> = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: "No rows provided" });
+  }
+  const inserted: unknown[] = [];
+  const failed: Array<{ row: number; error: string }> = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    try {
+      const joiningDate = String(r.joiningDate ?? r.joining_date ?? new Date().toISOString().split("T")[0]);
+      const plan = String(r.plan ?? "1 Month");
+      const expiryDate = computeExpiry(joiningDate, plan);
+      const [member] = await db.insert(membersTable).values({
+        name: String(r.name),
+        phone: String(r.phone),
+        email: r.email ? String(r.email) : null,
+        gender: String(r.gender ?? "male").toLowerCase(),
+        age: Number(r.age ?? 25),
+        weight: r.weight ? Number(r.weight) : null,
+        height: r.height ? Number(r.height) : null,
+        goal: r.goal ? String(r.goal) : null,
+        plan,
+        joiningDate,
+        expiryDate,
+        paymentStatus: String(r.paymentStatus ?? r.payment_status ?? "paid"),
+        status: "active",
+      }).returning();
+      inserted.push(member);
+    } catch (err) {
+      failed.push({ row: i + 1, error: String(err) });
+    }
+  }
+
+  return res.status(201).json({ inserted: inserted.length, failed });
+});
+
 // DELETE /api/members/:id
 router.delete("/members/:id", async (req, res) => {
   const id = parseInt(req.params.id);
