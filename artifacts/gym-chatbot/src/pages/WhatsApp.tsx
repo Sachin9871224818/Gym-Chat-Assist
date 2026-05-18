@@ -282,14 +282,19 @@ export default function WhatsApp() {
 
   useEffect(() => { saveConfig(config); }, [config]);
 
-  function getIntConfig(id: string): IntegrationConfig {
-    return config[id] ?? { enabled: false, webhookUrl: DEFAULT_WEBHOOK };
+  function getIntConfig(id: string, defaultWebhook?: string): IntegrationConfig {
+    return config[id] ?? { enabled: false, webhookUrl: defaultWebhook ?? DEFAULT_WEBHOOK };
   }
 
-  function toggle(id: string) {
+  function toggle(integration: Integration) {
+    const defaultWebhook = integration.webhookUrl ?? DEFAULT_WEBHOOK;
     setConfig(prev => ({
       ...prev,
-      [id]: { ...getIntConfig(id), ...prev[id], enabled: !(prev[id]?.enabled ?? false) },
+      [integration.id]: {
+        webhookUrl: defaultWebhook,
+        ...prev[integration.id],
+        enabled: !(prev[integration.id]?.enabled ?? false),
+      },
     }));
   }
 
@@ -299,7 +304,8 @@ export default function WhatsApp() {
 
   async function testSend(integration: Integration) {
     const cfg = getIntConfig(integration.id);
-    const effectiveWebhook = cfg.webhookUrl || integration.webhookUrl || DEFAULT_WEBHOOK;
+    const userHasCustomUrl = cfg.webhookUrl && cfg.webhookUrl !== DEFAULT_WEBHOOK;
+    const effectiveWebhook = userHasCustomUrl ? cfg.webhookUrl : (integration.webhookUrl ?? DEFAULT_WEBHOOK);
     const proxyUrl = toProxyUrl(effectiveWebhook);
     setTesting(integration.id);
     try {
@@ -398,7 +404,7 @@ export default function WhatsApp() {
                       <div className="mt-3 flex items-center gap-2">
                         {/* Toggle */}
                         <button
-                          onClick={() => toggle(integration.id)}
+                          onClick={() => toggle(integration)}
                           className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${cfg.enabled ? "bg-[#25D366]" : "bg-muted-foreground/30"}`}
                         >
                           <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${cfg.enabled ? "left-5" : "left-0.5"}`} />
