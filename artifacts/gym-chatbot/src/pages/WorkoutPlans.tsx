@@ -464,7 +464,7 @@ export default function WorkoutPlans() {
 
                         {/* Extra fields (future-ready) */}
                         {Object.entries(ex)
-                          .filter(([k]) => !["exercise_id","category","level","title","description"].includes(k))
+                          .filter(([k]) => !["exercise_id","category","level","title","description","id","createdAt","updatedAt"].includes(k))
                           .filter(([, v]) => v !== null && v !== undefined && v !== "")
                           .map(([k, v]) => (
                             <p key={k} className="text-[10px] text-muted-foreground mt-1">

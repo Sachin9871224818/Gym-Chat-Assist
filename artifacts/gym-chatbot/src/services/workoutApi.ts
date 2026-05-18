@@ -25,8 +25,15 @@ async function callProxy(path: string, method: "GET" | "POST", body?: object): P
 
 export async function fetchExercises(): Promise<Exercise[]> {
   const data = await callProxy("gymbot_exercises", "GET");
-  if (Array.isArray(data)) return data as Exercise[];
-  return [];
+  console.log("Exercises raw response:", data);
+  let list: Exercise[] = [];
+  if (Array.isArray(data)) {
+    list = data as Exercise[];
+  } else if (data && typeof data === "object" && !Array.isArray(data)) {
+    list = [data as Exercise];
+  }
+  // Normalize exercise_id to string
+  return list.map(ex => ({ ...ex, exercise_id: String(ex.exercise_id) }));
 }
 
 export async function addExercise(exercise: {
