@@ -20,7 +20,8 @@ export default function Broadcasts() {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { data: broadcasts, isLoading } = useListBroadcasts({ query: { queryKey: getListBroadcastsQueryKey() } });
+  const { data: rawBroadcasts, isLoading } = useListBroadcasts({ query: { queryKey: getListBroadcastsQueryKey() } });
+  const broadcasts = Array.isArray(rawBroadcasts) ? rawBroadcasts : [];
   const createBroadcast = useCreateBroadcast();
 
   const form = useForm({ defaultValues: { title: "", message: "", type: "announcement", targetAudience: "all" } });

@@ -9,8 +9,10 @@ export default function TrainerDetail() {
   const trainerId = parseInt(id);
 
   const { data: trainer, isLoading } = useGetTrainer(trainerId, { query: { queryKey: getGetTrainerQueryKey(trainerId) } });
-  const { data: members } = useGetTrainerMembers(trainerId, { query: { queryKey: getGetTrainerMembersQueryKey(trainerId) } });
-  const { data: bookings } = useGetTrainerBookings(trainerId, { query: { queryKey: getGetTrainerBookingsQueryKey(trainerId) } });
+  const { data: rawMembers } = useGetTrainerMembers(trainerId, { query: { queryKey: getGetTrainerMembersQueryKey(trainerId) } });
+  const members = Array.isArray(rawMembers) ? rawMembers : [];
+  const { data: rawBookings } = useGetTrainerBookings(trainerId, { query: { queryKey: getGetTrainerBookingsQueryKey(trainerId) } });
+  const bookings = Array.isArray(rawBookings) ? rawBookings : [];
 
   if (isLoading) {
     return <div className="p-6 space-y-4">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />)}</div>;

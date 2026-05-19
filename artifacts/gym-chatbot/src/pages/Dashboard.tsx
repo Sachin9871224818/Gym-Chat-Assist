@@ -113,10 +113,10 @@ export default function Dashboard() {
           <p className="text-sm font-semibold text-foreground">Recent Activity</p>
         </div>
         <div className="divide-y divide-border">
-          {(activity?.length ?? 0) === 0 ? (
+          {(!Array.isArray(activity) || activity.length === 0) ? (
             <div className="px-5 py-8 text-center text-sm text-muted-foreground">No recent activity</div>
           ) : (
-            activity?.slice(0, 8).map(item => (
+            activity.slice(0, 8).map(item => (
               <div key={item.id} className="flex items-center gap-3 px-5 py-3.5" data-testid={`activity-item-${item.id}`}>
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.type === "member" ? "bg-primary" : item.type === "lead" ? "bg-amber-500" : "bg-emerald-500"}`} />
                 <p className="text-sm text-foreground flex-1">{item.description}</p>

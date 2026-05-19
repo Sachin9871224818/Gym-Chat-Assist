@@ -25,8 +25,10 @@ export default function MemberDetail() {
 
   const memberId = parseInt(id);
   const { data: member, isLoading } = useGetMember(memberId, { query: { queryKey: getGetMemberQueryKey(memberId) } });
-  const { data: progress } = useGetMemberProgress(memberId, { query: { queryKey: getGetMemberProgressQueryKey(memberId) } });
-  const { data: attendance } = useListAttendance({ memberId }, { query: { queryKey: getListAttendanceQueryKey({ memberId }) } });
+  const { data: rawProgress } = useGetMemberProgress(memberId, { query: { queryKey: getGetMemberProgressQueryKey(memberId) } });
+  const progress = Array.isArray(rawProgress) ? rawProgress : [];
+  const { data: rawAttendance } = useListAttendance({ memberId }, { query: { queryKey: getListAttendanceQueryKey({ memberId }) } });
+  const attendance = Array.isArray(rawAttendance) ? rawAttendance : [];
   const renewMembership = useRenewMembership();
   const addProgress = useAddMemberProgress();
 

@@ -204,8 +204,10 @@ export default function Members() {
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(planFilter ? { plan: planFilter } : {}),
   };
-  const { data: members, isLoading } = useListMembers(params, { query: { queryKey: getListMembersQueryKey(params) } });
-  const { data: trainers = [] } = useListTrainers({ query: { queryKey: ["trainers"] } });
+  const { data: rawMembers, isLoading } = useListMembers(params, { query: { queryKey: getListMembersQueryKey(params) } });
+  const members = Array.isArray(rawMembers) ? rawMembers : [];
+  const { data: rawTrainers } = useListTrainers({ query: { queryKey: ["trainers"] } });
+  const trainers = Array.isArray(rawTrainers) ? rawTrainers : [];
   const createMember = useCreateMember();
   const deleteMember = useDeleteMember();
 

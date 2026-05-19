@@ -11,7 +11,8 @@ export default function Trainers() {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { data: trainers, isLoading } = useListTrainers({ query: { queryKey: getListTrainersQueryKey() } });
+  const { data: rawTrainers, isLoading } = useListTrainers({ query: { queryKey: getListTrainersQueryKey() } });
+  const trainers = Array.isArray(rawTrainers) ? rawTrainers : [];
   const createTrainer = useCreateTrainer();
   const deleteTrainer = useDeleteTrainer();
 

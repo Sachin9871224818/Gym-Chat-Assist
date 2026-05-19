@@ -15,7 +15,8 @@ export default function DietPlans() {
   const { toast } = useToast();
 
   const params = goal ? { goal } : {};
-  const { data: plans, isLoading } = useListDietPlans(params, { query: { queryKey: getListDietPlansQueryKey(params) } });
+  const { data: rawPlans, isLoading } = useListDietPlans(params, { query: { queryKey: getListDietPlansQueryKey(params) } });
+  const plans = Array.isArray(rawPlans) ? rawPlans : [];
   const createDietPlan = useCreateDietPlan();
 
   const form = useForm({ defaultValues: { title: "", goal: "Weight Loss", content: "" } });

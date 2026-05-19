@@ -11,8 +11,10 @@ export default function Attendance() {
   const qc = useQueryClient();
 
   const params = { ...(date ? { date } : {}) };
-  const { data: records, isLoading } = useListAttendance(params, { query: { queryKey: getListAttendanceQueryKey(params) } });
-  const { data: members } = useListMembers({}, { query: { queryKey: getListMembersQueryKey({}) } });
+  const { data: rawRecords, isLoading } = useListAttendance(params, { query: { queryKey: getListAttendanceQueryKey(params) } });
+  const records = Array.isArray(rawRecords) ? rawRecords : [];
+  const { data: rawMembers } = useListMembers({}, { query: { queryKey: getListMembersQueryKey({}) } });
+  const members = Array.isArray(rawMembers) ? rawMembers : [];
   const recordAttendance = useRecordAttendance();
 
   function handleAttendance(type: "check_in" | "check_out") {

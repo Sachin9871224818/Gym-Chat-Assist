@@ -85,7 +85,8 @@ export default function Membership() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
-  const { data: members = [], isLoading } = useListMembers({}, { query: { queryKey: getListMembersQueryKey({}) } });
+  const { data: rawMembers, isLoading } = useListMembers({}, { query: { queryKey: getListMembersQueryKey({}) } });
+  const members = Array.isArray(rawMembers) ? rawMembers : [];
   const renewMembership = useRenewMembership();
   const now = new Date();
 
