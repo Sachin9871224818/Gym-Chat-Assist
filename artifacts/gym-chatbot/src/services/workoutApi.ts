@@ -61,27 +61,27 @@ export async function deleteExercise(exercise_id: string): Promise<void> {
 }
 
 export const CATEGORIES = [
-  { id: 1, name: "Chest" },
-  { id: 2, name: "Back" },
-  { id: 3, name: "Legs" },
-  { id: 4, name: "Shoulder" },
-  { id: 5, name: "Biceps" },
-  { id: 6, name: "Triceps" },
-  { id: 7, name: "Abs" },
-  { id: 8, name: "Cardio" },
+  { id: 1, name: "chest" },
+  { id: 2, name: "back" },
+  { id: 3, name: "legs" },
+  { id: 4, name: "shoulders" },
+  { id: 5, name: "biceps" },
+  { id: 6, name: "triceps" },
+  { id: 7, name: "abs" },
+  { id: 8, name: "cardio" },
 ];
 
 export const LEVELS = ["beginner", "advanced"];
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  chest:    "bg-red-100 text-red-700 border-red-200",
-  back:     "bg-blue-100 text-blue-700 border-blue-200",
-  legs:     "bg-green-100 text-green-700 border-green-200",
-  shoulder: "bg-purple-100 text-purple-700 border-purple-200",
-  biceps:   "bg-yellow-100 text-yellow-700 border-yellow-200",
-  triceps:  "bg-orange-100 text-orange-700 border-orange-200",
-  abs:      "bg-pink-100 text-pink-700 border-pink-200",
-  cardio:   "bg-cyan-100 text-cyan-700 border-cyan-200",
+  chest:     "bg-red-100 text-red-700 border-red-200",
+  back:      "bg-blue-100 text-blue-700 border-blue-200",
+  legs:      "bg-green-100 text-green-700 border-green-200",
+  shoulders: "bg-purple-100 text-purple-700 border-purple-200",
+  biceps:    "bg-yellow-100 text-yellow-700 border-yellow-200",
+  triceps:   "bg-orange-100 text-orange-700 border-orange-200",
+  abs:       "bg-pink-100 text-pink-700 border-pink-200",
+  cardio:    "bg-cyan-100 text-cyan-700 border-cyan-200",
 };
 
 export const LEVEL_COLORS: Record<string, string> = {

@@ -16,7 +16,7 @@ import {
 
 const ALL_CATEGORIES = ["All", ...CATEGORIES.map(c => c.name)];
 
-const EMPTY_FORM = { exercise_id: "", category: "Chest", level: "beginner", title: "", description: "" };
+const EMPTY_FORM = { exercise_id: "", category: "chest", level: "beginner", title: "", description: "" };
 
 function ExerciseFormModal({
   mode,
@@ -213,6 +213,7 @@ export default function WorkoutPlans() {
     setError("");
     try {
       const data = await fetchExercises();
+      console.log("exercises", data);
       setExercises(data);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load exercises";
@@ -246,10 +247,11 @@ export default function WorkoutPlans() {
 
   const grouped = CATEGORIES.reduce<Record<string, Exercise[]>>((acc, cat) => {
     acc[cat.name] = filteredExercises.filter(
-      ex => ex.category?.toLowerCase() === cat.name.toLowerCase()
+      ex => ex.category?.toLowerCase() === cat.name
     );
     return acc;
   }, {});
+  console.log("grouped", grouped);
 
   const visibleGroups = categoryFilter === "All"
     ? CATEGORIES.filter(c => grouped[c.name].length > 0).map(c => c.name)
@@ -307,10 +309,10 @@ export default function WorkoutPlans() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {cat}
+              {cat === "All" ? "All" : cat.charAt(0).toUpperCase() + cat.slice(1)}
               {cat !== "All" && (
                 <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${categoryFilter === cat ? "bg-white/20" : "bg-background"}`}>
-                  {exercises.filter(e => e.category?.toLowerCase() === cat.toLowerCase()).length}
+                  {exercises.filter(e => e.category?.toLowerCase() === cat).length}
                 </span>
               )}
             </button>
@@ -405,7 +407,7 @@ export default function WorkoutPlans() {
                 >
                   <div className="flex items-center gap-3">
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border capitalize ${colorClass}`}>
-                      {catName}
+                      {catName.charAt(0).toUpperCase() + catName.slice(1)}
                     </span>
                     <span className="text-xs text-muted-foreground">{catExercises.length} exercise{catExercises.length !== 1 ? "s" : ""}</span>
                   </div>
