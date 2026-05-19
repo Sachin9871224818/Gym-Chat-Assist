@@ -1,11 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import {
-  useListMembers, useCreateMember, useDeleteMember,
-  useListTrainers, getListMembersQueryKey
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useListTrainers } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Plus, Search, ChevronRight, Trash2, Loader2, Calculator, X, Upload, Download, CheckCircle, AlertCircle } from "lucide-react";
+import { Plus, Search, ChevronRight, Loader2, Calculator, X, Upload, Download, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const N8N_WEBHOOK = "https://n8n.grindoverdreams.in/webhook/gymbot";
@@ -19,8 +15,29 @@ const PLAN_OPTIONS = [
 ];
 
 const PRICES: Record<string, number> = {
-  "1 Month": 2000, "3 Months": 5000, "6 Months": 9000, "1 Year": 17000,
+  "Monthly": 2000, "Quarterly": 5000, "Half Yearly": 9000, "Yearly": 17000,
 };
+
+interface N8nMember {
+  member_id: string;
+  name: string;
+  phone: number | string;
+  age: number;
+  gender: string;
+  weight?: number;
+  height?: number;
+  bmi?: number;
+  goal?: string;
+  experience_level?: string;
+  injury_notes?: string;
+  join_date: string;
+  membership_plan: string;
+  membership_expiry: string;
+  fee_status: string;
+  status: string;
+  assigned_trainer?: string;
+  [key: string]: unknown;
+}
 
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700",
@@ -155,7 +172,6 @@ export default function Members() {
   const [importResult, setImportResult] = useState<{ inserted: number; failed: { row: number; error: string }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const qc = useQueryClient();
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -185,7 +201,7 @@ export default function Members() {
       const result = await res.json();
       setImportResult(result);
       if (result.inserted > 0) {
-        qc.invalidateQueries({ queryKey: getListMembersQueryKey() });
+        await loadMembers();
         toast({ title: `${result.inserted} members imported successfully!` });
       }
     } catch {
@@ -199,17 +215,37 @@ export default function Members() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  const params = {
-    ...(search ? { search } : {}),
-    ...(statusFilter ? { status: statusFilter } : {}),
-    ...(planFilter ? { plan: planFilter } : {}),
-  };
-  const { data: rawMembers, isLoading } = useListMembers(params, { query: { queryKey: getListMembersQueryKey(params) } });
-  const members = Array.isArray(rawMembers) ? rawMembers : [];
+  const [allMembers, setAllMembers] = useState<N8nMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadMembers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/webhook-proxy/gymbot_members`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setAllMembers(Array.isArray(data) ? data : data ? [data] : []);
+    } catch (err) {
+      toast({ title: "Failed to load members", description: String(err), variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { loadMembers(); }, [loadMembers]);
+
+  const members = allMembers.filter(m => {
+    const matchSearch = !search ||
+      m.name?.toLowerCase().includes(search.toLowerCase()) ||
+      String(m.phone).includes(search);
+    const matchStatus = !statusFilter || m.status?.toLowerCase() === statusFilter.toLowerCase();
+    const matchPlan = !planFilter || m.membership_plan === planFilter;
+    return matchSearch && matchStatus && matchPlan;
+  });
+
   const { data: rawTrainers } = useListTrainers({ query: { queryKey: ["trainers"] } });
   const trainers = Array.isArray(rawTrainers) ? rawTrainers : [];
-  const createMember = useCreateMember();
-  const deleteMember = useDeleteMember();
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm(prev => {
@@ -256,7 +292,6 @@ export default function Members() {
     if (!validate()) return;
     setSubmitting(true);
 
-    const selectedPlan = PLAN_OPTIONS.find(p => p.value === form.membership_plan)!;
     const bmiNum = form.bmi ? parseFloat(form.bmi) : 0;
 
     const rawPhone = form.phone.replace(/\D/g, "");
@@ -282,21 +317,7 @@ export default function Members() {
       assigned_trainer: form.assigned_trainer || null,
     };
 
-    const localPayload = {
-      name: form.name.trim(),
-      phone: form.phone.replace(/\s/g, ""),
-      age: Number(form.age),
-      gender: form.gender,
-      weight: form.weight ? Number(form.weight) : undefined,
-      height: form.height ? Number(form.height) : undefined,
-      goal: form.goal,
-      plan: selectedPlan.localValue,
-      joiningDate: form.join_date,
-      paymentStatus: form.fee_status === "Paid" ? "paid" : "pending",
-    };
-
     let n8nOk = false;
-    let localOk = false;
 
     try {
       const res = await fetch(N8N_WEBHOOK, {
@@ -309,41 +330,17 @@ export default function Members() {
       n8nOk = false;
     }
 
-    await new Promise<void>((resolve) => {
-      createMember.mutate({ data: localPayload as never }, {
-        onSuccess: () => { localOk = true; resolve(); },
-        onError: () => { localOk = false; resolve(); },
-      });
-    });
-
     setSubmitting(false);
 
-    if (localOk || n8nOk) {
-      qc.invalidateQueries({ queryKey: getListMembersQueryKey() });
+    if (n8nOk) {
+      await loadMembers();
       setOpen(false);
       setForm(INITIAL_FORM);
       setErrors({});
-      toast({
-        title: "Member registered successfully!",
-        description: n8nOk
-          ? "Saved to n8n data table & local database."
-          : "Saved to local database (n8n sync pending).",
-      });
+      toast({ title: "Member registered successfully!", description: "Saved to n8n database." });
     } else {
-      toast({ title: "Registration failed", description: "Both n8n and local save failed. Please try again.", variant: "destructive" });
+      toast({ title: "Registration failed", description: "Could not save to n8n. Please try again.", variant: "destructive" });
     }
-  }
-
-  function handleDelete(e: React.MouseEvent, id: number) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!confirm("Delete this member?")) return;
-    deleteMember.mutate({ id }, {
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListMembersQueryKey() });
-        toast({ title: "Member deleted" });
-      },
-    });
   }
 
   const bmiCategory = (bmi: number) => {
@@ -378,7 +375,7 @@ export default function Members() {
           </select>
           <select value={planFilter} onChange={e => setPlanFilter(e.target.value)} className="text-sm border border-input rounded-lg px-3 py-2 bg-background focus:outline-none">
             <option value="">All Plans</option>
-            {PLAN_OPTIONS.map(p => <option key={p.value} value={p.localValue}>{p.label}</option>)}
+            {PLAN_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
@@ -421,13 +418,13 @@ export default function Members() {
                 ))
               ) : (members?.length ?? 0) === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">No members found</td></tr>
-              ) : members?.map(m => (
-                <tr key={m.id} className="hover:bg-muted/30 transition-colors">
+              ) : members.map((m, idx) => (
+                <tr key={m.member_id ?? idx} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
-                    <Link href={`/members/${m.id}`}>
+                    <Link href={`/members/${m.member_id}`}>
                       <div className="flex items-center gap-2.5 cursor-pointer">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-primary">{m.name[0]}</span>
+                          <span className="text-xs font-bold text-primary">{m.name?.[0] ?? "?"}</span>
                         </div>
                         <div>
                           <p className="font-medium text-foreground hover:text-primary">{m.name}</p>
@@ -436,33 +433,30 @@ export default function Members() {
                       </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{m.phone}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+                    {String(m.phone).replace(/^91/, "")}
+                  </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs font-medium">{m.plan}</span>
-                    <p className="text-xs text-muted-foreground">₹{PRICES[m.plan]?.toLocaleString("en-IN") ?? "-"}</p>
+                    <span className="text-xs font-medium">{m.membership_plan}</span>
+                    <p className="text-xs text-muted-foreground">₹{PRICES[m.membership_plan]?.toLocaleString("en-IN") ?? "-"}</p>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell">
-                    {new Date(m.expiryDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    {m.membership_expiry ? new Date(m.membership_expiry).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[m.status] ?? "bg-muted text-muted-foreground"}`}>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[m.status?.toLowerCase()] ?? "bg-muted text-muted-foreground"}`}>
                       {m.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${m.paymentStatus === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                      {m.paymentStatus}
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${m.fee_status?.toLowerCase() === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                      {m.fee_status}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button onClick={e => handleDelete(e, m.id)} className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                      <Link href={`/members/${m.id}`}>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      </Link>
-                    </div>
+                    <Link href={`/members/${m.member_id}`}>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </Link>
                   </td>
                 </tr>
               ))}
