@@ -15,6 +15,7 @@ import Leads from "@/pages/Leads";
 import Broadcasts from "@/pages/Broadcasts";
 import Membership from "@/pages/Membership";
 import WhatsApp from "@/pages/WhatsApp";
+import Accounting from "@/pages/Accounting";
 import Layout from "@/components/Layout";
 
 const queryClient = new QueryClient({
@@ -39,6 +40,7 @@ function Router() {
         <Route path="/leads" component={Leads} />
         <Route path="/broadcasts" component={Broadcasts} />
         <Route path="/whatsapp" component={WhatsApp} />
+        <Route path="/accounting" component={Accounting} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
