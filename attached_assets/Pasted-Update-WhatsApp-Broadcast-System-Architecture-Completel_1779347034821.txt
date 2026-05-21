@@ -1,0 +1,283 @@
+Update WhatsApp Broadcast System Architecture Completely.
+
+Current variable-based system is wrong.
+
+New architecture should work like a real WhatsApp SaaS broadcast system.
+
+━━━━━━━━━━━━━━━━━━━
+BROADCAST FLOW
+━━━━━━━━━━━━━━━━━━━
+
+1. Admin opens:
+   Broadcasts → New Broadcast
+
+2. Admin selects:
+
+* Target Audience
+* WhatsApp Template
+
+3. Frontend automatically:
+
+* fetches members based on audience
+* prepares clean member payload
+* sends template + member data to n8n
+
+4. n8n handles:
+
+* looping members
+* variable replacement
+* WhatsApp sending
+* delivery workflow
+
+Frontend should NOT ask for variables manually anymore.
+
+━━━━━━━━━━━━━━━━━━━
+REMOVE COMPLETELY
+━━━━━━━━━━━━━━━━━━━
+
+Remove from UI:
+
+* Fill Variables section
+* Variable input fields
+* Variable badges
+* Manual variable system
+* Variable count chips
+
+Remove all logic related to:
+
+* variable_count
+* manual variable form generation
+* manual placeholder filling
+
+━━━━━━━━━━━━━━━━━━━
+KEEP IN UI
+━━━━━━━━━━━━━━━━━━━
+
+Keep:
+
+* Target Audience cards
+* Template dropdown
+* Template preview
+* Send Broadcast button
+
+━━━━━━━━━━━━━━━━━━━
+TEMPLATE FETCH API
+━━━━━━━━━━━━━━━━━━━
+
+GET
+https://n8n.grindoverdreams.in/webhook/gymbot_templates
+
+Frontend should fetch templates on modal open.
+
+━━━━━━━━━━━━━━━━━━━
+TARGET AUDIENCE WEBHOOKS
+━━━━━━━━━━━━━━━━━━━
+
+When admin clicks SEND BROADCAST:
+
+ALL MEMBERS:
+POST
+https://n8n.grindoverdreams.in/webhook/gymbot_all_members_bc
+
+ACTIVE MEMBERS:
+POST
+https://n8n.grindoverdreams.in/webhook/gymbot_active_members_bc
+
+EXPIRED MEMBERS:
+POST
+https://n8n.grindoverdreams.in/webhook/gymbot_expired_members_bc
+
+EXPIRING IN 30 DAYS:
+POST
+https://n8n.grindoverdreams.in/webhook/gymbot_expiring_30days_members_bc
+
+FEE PENDING:
+POST
+https://n8n.grindoverdreams.in/webhook/gymbot_fee_pending_bc
+
+━━━━━━━━━━━━━━━━━━━
+FRONTEND MEMBER FILTERING
+━━━━━━━━━━━━━━━━━━━
+
+Frontend should filter members from database according to selected audience.
+
+Example:
+
+ALL MEMBERS:
+
+* all users
+
+ACTIVE MEMBERS:
+
+* active memberships only
+
+EXPIRED MEMBERS:
+
+* expired memberships only
+
+EXPIRING 30 DAYS:
+
+* expiry_date within next 30 days
+
+FEE PENDING:
+
+* pending_amount > 0
+
+━━━━━━━━━━━━━━━━━━━
+POST BODY FORMAT
+━━━━━━━━━━━━━━━━━━━
+
+For ALL MEMBERS / ACTIVE MEMBERS:
+
+{
+"audience_type": "active_members",
+
+"template": {
+"id": "1746012429893845",
+"name": "gym_trial_invite",
+"body": "Hello {{1}}! 💪...",
+"category": "MARKETING",
+"language": "en",
+"buttons": [
+{
+"type": "QUICK_REPLY",
+"text": "Get Location"
+}
+]
+},
+
+"members": [
+{
+"member_id": 1,
+"name": "Sachin",
+"phone": "919721234567"
+},
+{
+"member_id": 2,
+"name": "Rahul",
+"phone": "919812345678"
+}
+]
+}
+
+━━━━━━━━━━━━━━━━━━━
+EXPIRING MEMBERS FORMAT
+━━━━━━━━━━━━━━━━━━━
+
+{
+"audience_type": "expiring_members",
+
+"template": {
+"id": "1021887647072887",
+"name": "gym_membership_expiry_reminder",
+"body": "Namaste {{1}} ji..."
+},
+
+"members": [
+{
+"member_id": 11,
+"name": "Rahul",
+"phone": "919812345678",
+"expiry_date": "25 May 2026",
+"membership_plan": "3 Months"
+}
+]
+}
+
+━━━━━━━━━━━━━━━━━━━
+FEE PENDING FORMAT
+━━━━━━━━━━━━━━━━━━━
+
+{
+"audience_type": "fee_pending",
+
+"template": {
+"id": "983001330998012",
+"name": "gym_fee_pending_reminder",
+"body": "Namaste {{1}} ji..."
+},
+
+"members": [
+{
+"member_id": 21,
+"name": "Sachin",
+"phone": "919721234567",
+"pending_amount": "6000",
+"membership_plan": "Monthly"
+}
+]
+}
+
+━━━━━━━━━━━━━━━━━━━
+TEMPLATE PREVIEW LOGIC
+━━━━━━━━━━━━━━━━━━━
+
+Preview should automatically render using FIRST member sample data.
+
+Example:
+If template contains:
+{{1}}
+{{2}}
+
+Replace automatically using first member object.
+
+NO manual input required.
+
+━━━━━━━━━━━━━━━━━━━
+SEND BUTTON LOGIC
+━━━━━━━━━━━━━━━━━━━
+
+Flow:
+
+Select Audience
+→ Select Template
+→ Frontend prepares members payload
+→ POST to correct webhook
+→ Show success toast
+
+━━━━━━━━━━━━━━━━━━━
+SUCCESS / ERROR TOASTS
+━━━━━━━━━━━━━━━━━━━
+
+Success:
+"Broadcast started successfully"
+
+Error:
+"Unable to start broadcast"
+
+Loading:
+"Sending broadcast..."
+
+━━━━━━━━━━━━━━━━━━━
+UI DESIGN
+━━━━━━━━━━━━━━━━━━━
+
+Design style:
+
+* WhatsApp Business SaaS UI
+* Compact mobile-first layout
+* Premium admin panel feel
+* Sticky bottom send button
+* Smooth dropdown animation
+* Better spacing
+* Cleaner preview card
+
+━━━━━━━━━━━━━━━━━━━
+IMPORTANT
+━━━━━━━━━━━━━━━━━━━
+
+Frontend should ONLY:
+
+* select audience
+* select template
+* prepare members payload
+* send clean JSON to n8n
+
+n8n will handle:
+
+* loop processing
+* variable replacement
+* WhatsApp sending
+* retries
+* delivery logic
+* logging
